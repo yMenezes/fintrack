@@ -22,22 +22,22 @@ const navSections = [
     label: 'Principal',
     items: [
       { href: '/dashboard',       label: 'Dashboard',      icon: LayoutDashboard },
-      { href: '/lancamentos',     label: 'Lançamentos',    icon: List            },
-      { href: '/faturas',         label: 'Fatura mensal',  icon: CalendarRange   },
-      { href: '/cartoes',         label: 'Cartões',        icon: CreditCard      },
+      { href: '/transactions',     label: 'Lançamentos',    icon: List            },
+      { href: '/invoices',         label: 'Fatura mensal',  icon: CalendarRange   },
+      { href: '/cards',           label: 'Cartões',        icon: CreditCard      },
     ],
   },
   {
     label: 'Gestão',
     items: [
-      { href: '/categorias', label: 'Categorias', icon: Tag   },
-      { href: '/pessoas',    label: 'Pessoas',    icon: Users },
+      { href: '/categories', label: 'Categorias', icon: Tag   },
+      { href: '/people',    label: 'Pessoas',    icon: Users },
     ],
   },
   {
     label: 'Sistema',
     items: [
-      { href: '/configuracoes', label: 'Configurações', icon: Settings },
+      { href: '/settings', label: 'Configurações', icon: Settings },
     ],
   },
 ]
