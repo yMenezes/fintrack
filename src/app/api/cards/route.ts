@@ -34,3 +34,18 @@ export async function POST(request: Request) {
 
   return NextResponse.json(data, { status: 201 })
 }
+
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const { data } = await supabase
+    .from('cards')
+    .select('id, name, closing_day')
+    .is('deleted_at', null)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+
+  return NextResponse.json(data ?? [])
+}
