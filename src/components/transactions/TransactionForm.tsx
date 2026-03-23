@@ -26,9 +26,23 @@ type Person = { id: string; name: string };
 
 type Props = {
   onSuccess: () => void;
+  transaction?: TransactionData | null;
 };
 
-export function TransactionForm({ onSuccess }: Props) {
+type TransactionData = {
+  id: string;
+  description: string;
+  total_amount: number;
+  installments_count: number;
+  purchase_date: string;
+  type: string;
+  notes: string | null;
+  cards: { id: string } | null;
+  categories: { id: string } | null;
+  people: { id: string } | null;
+};
+
+export function TransactionForm({ onSuccess, transaction }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,18 +64,32 @@ export function TransactionForm({ onSuccess }: Props) {
 
   // Reset ao montar o componente (toda vez que o painel abre)
   useEffect(() => {
-    setCents(0);
-    setForm({
-      description: "",
-      installments_count: "1",
-      purchase_date: new Date().toISOString().split("T")[0],
-      type: "credit",
-      card_id: "",
-      category_id: "",
-      person_id: "",
-      notes: "",
-    });
-  }, []);
+    if (transaction) {
+      setCents(Math.round(transaction.total_amount * 100));
+      setForm({
+        description: transaction.description,
+        installments_count: String(transaction.installments_count),
+        purchase_date: transaction.purchase_date,
+        type: transaction.type,
+        card_id: transaction.cards?.id ?? "",
+        category_id: transaction.categories?.id ?? "",
+        person_id: transaction.people?.id ?? "",
+        notes: transaction.notes ?? "",
+      });
+    } else {
+      setCents(0);
+      setForm({
+        description: "",
+        installments_count: "1",
+        purchase_date: new Date().toISOString().split("T")[0],
+        type: "credit",
+        card_id: "",
+        category_id: "",
+        person_id: "",
+        notes: "",
+      });
+    }
+  }, [transaction]);
 
   // Carrega os dados de apoio ao abrir o painel
   useEffect(() => {
@@ -119,8 +147,13 @@ export function TransactionForm({ onSuccess }: Props) {
     }
 
     try {
-      const res = await fetch("/api/transactions", {
-        method: "POST",
+      const url = transaction
+        ? `/api/transactions/${transaction.id}`
+        : "/api/transactions";
+      const method = transaction ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           description: form.description,
@@ -349,7 +382,11 @@ export function TransactionForm({ onSuccess }: Props) {
           Cancelar
         </Button>
         <Button onClick={handleSubmit} disabled={loading}>
-          {loading ? "Salvando..." : "Salvar lançamento"}
+          {loading
+            ? "Salvando..."
+            : transaction
+              ? "Salvar alterações"
+              : "Salvar lançamento"}
         </Button>
       </div>
     </div>

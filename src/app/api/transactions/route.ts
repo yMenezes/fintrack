@@ -96,3 +96,53 @@ export async function POST(request: Request) {
 
   return NextResponse.json(transaction, { status: 201 });
 }
+
+export async function GET(request: Request) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const { searchParams } = new URL(request.url)
+  const month    = searchParams.get('month')
+  const year     = searchParams.get('year')
+  const cardId   = searchParams.get('card_id')
+  const categoryId = searchParams.get('category_id')
+  const personId = searchParams.get('person_id')
+  const type     = searchParams.get('type')
+
+  let query = supabase
+    .from('transactions')
+    .select(`
+      id,
+      description,
+      total_amount,
+      installments_count,
+      purchase_date,
+      type,
+      notes,
+      cards   ( id, name, color ),
+      categories ( id, name, icon, color ),
+      people  ( id, name )
+    `)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .order('purchase_date', { ascending: false })
+
+  if (cardId)     query = query.eq('card_id', cardId)
+  if (categoryId) query = query.eq('category_id', categoryId)
+  if (personId)   query = query.eq('person_id', personId)
+  if (type)       query = query.eq('type', type)
+  if (month && year) {
+    const from = `${year}-${month.padStart(2, '0')}-01`
+    const to   = new Date(Number(year), Number(month), 0)
+      .toISOString().split('T')[0]
+    query = query.gte('purchase_date', from).lte('purchase_date', to)
+  }
+
+  const { data, error } = await query
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json(data ?? [])
+}
