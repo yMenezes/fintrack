@@ -25,9 +25,12 @@ type Category = { id: string; name: string; icon: string };
 type Person = { id: string; name: string };
 
 type Props = {
-  onSuccess: () => void;
-  transaction?: TransactionData | null;
-};
+  onSuccess:    () => void
+  transaction?: TransactionData | null
+  cards:        { id: string; name: string; closing_day: number }[]
+  categories:   { id: string; name: string; icon: string }[]
+  people:       { id: string; name: string }[]
+}
 
 type TransactionData = {
   id: string;
@@ -42,13 +45,10 @@ type TransactionData = {
   people: { id: string } | null;
 };
 
-export function TransactionForm({ onSuccess, transaction }: Props) {
+export function TransactionForm({ onSuccess, transaction, cards, categories, people }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
   const [cents, setCents] = useState(0);
 
   const [form, setForm] = useState({
@@ -90,26 +90,6 @@ export function TransactionForm({ onSuccess, transaction }: Props) {
       });
     }
   }, [transaction]);
-
-  // Carrega os dados de apoio ao abrir o painel
-  useEffect(() => {
-    async function load() {
-      const [cardsRes, catsRes, peopleRes] = await Promise.all([
-        fetch("/api/cards"),
-        fetch("/api/categories"),
-        fetch("/api/people"),
-      ]);
-      const [cardsData, catsData, peopleData] = await Promise.all([
-        cardsRes.json(),
-        catsRes.json(),
-        peopleRes.json(),
-      ]);
-      setCards(cardsData);
-      setCategories(catsData);
-      setPeople(peopleData);
-    }
-    load();
-  }, []);
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
