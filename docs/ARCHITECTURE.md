@@ -320,6 +320,62 @@ if (needsRegenerate) {
 
 This ensures that editing a transaction's description doesn't destroy the payment history of its installments.
 
+### Create vs. Edit UI State
+
+Forms that support both creating and editing use a **context-based mode system**:
+
+```ts
+// providers/TransactionPanelProvider.tsx
+
+type TransactionPanelContextType = {
+  isOpen: boolean
+  transaction: Transaction | null  // null = create mode, object = edit mode
+  mode: 'create' | 'edit'          // explicit state
+  open: (transaction?: Transaction) => void
+  close: () => void
+}
+```
+
+The `open()` function determines mode based on whether a transaction is passed:
+
+```ts
+const open = (transaction?: Transaction) => {
+  setTransaction(transaction ?? null)
+  setMode(transaction ? 'edit' : 'create')
+  setIsOpen(true)
+}
+```
+
+In the form component, the mode determines which schema and URL are used:
+
+```tsx
+// components/transactions/TransactionForm.tsx
+
+async function handleSubmit(data: TransactionInput) {
+  const url = mode === 'edit'
+    ? `/api/transactions/${transaction?.id}`
+    : '/api/transactions'
+  const method = mode === 'edit' ? 'PATCH' : 'POST'
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (mode === 'edit' && transaction) {
+      form.reset({
+        description: transaction.description,
+        total_amount: transaction.total_amount,
+        // ... other fields
+      })
+    }
+  }, [mode, transaction])
+}
+```
+
+This pattern ensures:
+- Same form component handles both operations
+- Schema validation is identical (client and server)
+- Button labels and URLs change automatically based on mode
+- Pre-filled data is loaded and form is reset when switching modes
+
 ---
 
 ## Folder structure rationale

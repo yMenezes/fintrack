@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { InvoicePage } from '@/components/invoices/InvoicePage'
+import { InvoicePageSkeleton } from '@/components/invoices/InvoicePageSkeleton'
 
 export default async function InvoicesPage({
   searchParams,
@@ -40,11 +42,13 @@ export default async function InvoicesPage({
   ])
 
   return (
-    <InvoicePage
-      initialInstallments={(installmentsRes.data ?? []) as any}
-      cards={cardsRes.data ?? []}
-      month={month}
-      year={year}
-    />
+    <Suspense fallback={<InvoicePageSkeleton />}>
+      <InvoicePage
+        initialInstallments={(installmentsRes.data ?? []) as any}
+        cards={cardsRes.data ?? []}
+        month={month}
+        year={year}
+      />
+    </Suspense>
   )
 }

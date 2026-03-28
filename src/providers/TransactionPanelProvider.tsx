@@ -10,6 +10,9 @@ type Transaction = {
   purchase_date:      string
   type:               string
   notes:              string | null
+  card_id:            string | null
+  category_id:        string | null
+  person_id:          string | null
   cards:              { id: string } | null
   categories:         { id: string } | null
   people:             { id: string } | null
@@ -18,6 +21,7 @@ type Transaction = {
 type TransactionPanelContextType = {
   isOpen:      boolean
   transaction: Transaction | null
+  mode:        'create' | 'edit'
   open:        (transaction?: Transaction) => void
   close:       () => void
 }
@@ -27,19 +31,27 @@ const TransactionPanelContext = createContext<TransactionPanelContextType | null
 export function TransactionPanelProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen]           = useState(false)
   const [transaction, setTransaction] = useState<Transaction | null>(null)
+  const [mode, setMode]               = useState<'create' | 'edit'>('create')
 
   function open(transaction?: Transaction) {
-    setTransaction(transaction ?? null)
+    if (transaction) {
+      setTransaction(transaction)
+      setMode('edit')
+    } else {
+      setTransaction(null)
+      setMode('create')
+    }
     setIsOpen(true)
   }
 
   function close() {
     setIsOpen(false)
     setTransaction(null)
+    setMode('create')
   }
 
   return (
-    <TransactionPanelContext.Provider value={{ isOpen, transaction, open, close }}>
+    <TransactionPanelContext.Provider value={{ isOpen, transaction, mode, open, close }}>
       {children}
     </TransactionPanelContext.Provider>
   )

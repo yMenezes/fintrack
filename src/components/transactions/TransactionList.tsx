@@ -16,6 +16,9 @@ type Transaction = {
   purchase_date: string;
   type: string;
   notes: string | null;
+  card_id:            string | null;
+  category_id:        string | null;
+  person_id:          string | null;
   cards:              { id: string; name: string; color: string } | null
   categories:         { id: string; name: string; icon: string; color: string } | null
   people:             { id: string; name: string } | null

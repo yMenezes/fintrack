@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { CardList } from '@/components/cards/CardList'
+import { CardListSkeleton } from '@/components/cards/CardListSkeleton'
 
 export default async function CartoesPage() {
   const supabase = await createClient()
@@ -12,7 +14,9 @@ export default async function CartoesPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 text-lg font-medium">Cartões</h1>
-      <CardList cards={cards ?? []} />
+      <Suspense fallback={<CardListSkeleton />}>
+        <CardList cards={cards ?? []} />
+      </Suspense>
     </div>
   )
 }

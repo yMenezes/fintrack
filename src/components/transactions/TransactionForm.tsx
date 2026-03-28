@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { transactionCreateSchema, type TransactionInput } from "@/lib/validations";
+import { useTransactionPanel } from "@/providers/TransactionPanelProvider";
+import { useTransactionData } from "@/providers/TransactionDataProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TransactionFormSkeleton } from "./TransactionFormSkeleton";
 
 const TYPES = [
   { value: "credit", label: "Crédito" },
@@ -30,66 +36,100 @@ type Props = {
 
 export function TransactionForm({ onSuccess }: Props) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [cards, setCards] = useState<Card[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
-  const [cents, setCents] = useState(0);
-
-  const [form, setForm] = useState({
-    description: "",
-    installments_count: "1",
-    purchase_date: new Date().toISOString().split("T")[0],
-    type: "credit",
-    card_id: "",
-    category_id: "",
-    person_id: "",
-    notes: "",
+  const { transaction, mode, close } = useTransactionPanel();
+  const contextData = useTransactionData();
+  const fetchedRef = useRef(false);
+  const [localData, setLocalData] = useState({
+    cards: [] as Card[],
+    categories: [] as Category[],
+    people: [] as Person[]
   });
+  const [cents, setCents] = useState(0);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // Reset ao montar o componente (toda vez que o painel abre)
-  useEffect(() => {
-    setCents(0);
-    setForm({
+  // Use context data or local data
+  const cards = contextData.cards.length > 0 ? contextData.cards : localData.cards;
+  const categories = contextData.categories.length > 0 ? contextData.categories : localData.categories;
+  const people = contextData.people.length > 0 ? contextData.people : localData.people;
+
+  const form = useForm<TransactionInput>({
+    resolver: zodResolver(transactionCreateSchema),
+    defaultValues: {
       description: "",
-      installments_count: "1",
+      total_amount: 0,
+      installments_count: 1,
       purchase_date: new Date().toISOString().split("T")[0],
       type: "credit",
-      card_id: "",
-      category_id: "",
-      person_id: "",
-      notes: "",
-    });
-  }, []);
+      card_id: null,
+      category_id: null,
+      person_id: null,
+      notes: null,
+    },
+  });
 
-  // Carrega os dados de apoio ao abrir o painel
+  const typeValue = form.watch("type");
+  const installmentsCountValue = form.watch("installments_count");
+  const isCredit = typeValue === "credit";
+
+  // Load data from context or fetch locally (only once)
   useEffect(() => {
-    async function load() {
-      const [cardsRes, catsRes, peopleRes] = await Promise.all([
-        fetch("/api/cards"),
-        fetch("/api/categories"),
-        fetch("/api/people"),
-      ]);
-      const [cardsData, catsData, peopleData] = await Promise.all([
-        cardsRes.json(),
-        catsRes.json(),
-        peopleRes.json(),
-      ]);
-      setCards(cardsData);
-      setCategories(catsData);
-      setPeople(peopleData);
+    if (contextData.cards.length > 0) {
+      setIsLoadingData(false);
+      return;
     }
-    load();
-  }, []);
 
-  function set(field: string, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
+    if (fetchedRef.current) {
+      return;
+    }
 
-  const isCredit = form.type === "credit";
-  const installmentsCount = parseInt(form.installments_count) || 1;
+    fetchedRef.current = true;
+
+    async function loadData() {
+      try {
+        const [cardsRes, catsRes, peopleRes] = await Promise.all([
+          fetch("/api/cards"),
+          fetch("/api/categories"),
+          fetch("/api/people"),
+        ]);
+        const [cardsData, catsData, peopleData] = await Promise.all([
+          cardsRes.json(),
+          catsRes.json(),
+          peopleRes.json(),
+        ]);
+        setLocalData({
+          cards: cardsData,
+          categories: catsData,
+          people: peopleData
+        });
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        fetchedRef.current = false;
+      } finally {
+        setIsLoadingData(false);
+      }
+    }
+
+    loadData();
+  }, [contextData.cards.length]);
+
+  // Only reset form to defaults, no pre-fill
+  useEffect(() => {
+    form.reset({
+      description: "",
+      total_amount: 0,
+      installments_count: 1,
+      purchase_date: new Date().toISOString().split("T")[0],
+      type: "credit",
+      card_id: null,
+      category_id: null,
+      person_id: null,
+      notes: null,
+    });
+    setCents(0);
+  }, [mode]);
+
   const totalAmount = cents / 100;
+  const installmentsCount = installmentsCountValue || 1;
   const amountPerInstallment =
     totalAmount > 0
       ? (totalAmount / installmentsCount).toLocaleString("pt-BR", {
@@ -98,61 +138,58 @@ export function TransactionForm({ onSuccess }: Props) {
         })
       : null;
 
-  async function handleSubmit() {
-    setError(null);
-    setLoading(true);
+  if (isLoadingData) {
+    return <TransactionFormSkeleton />;
+  }
 
-    if (!form.description.trim()) {
-      setError("Descrição é obrigatória");
-      setLoading(false);
-      return;
-    }
-    if (cents <= 0) {
-      setError("Valor deve ser maior que zero");
-      setLoading(false);
-      return;
-    }
-    if (!form.purchase_date) {
-      setError("Data da compra é obrigatória");
-      setLoading(false);
-      return;
-    }
-
+  async function handleSubmit(data: TransactionInput) {
     try {
-      const res = await fetch("/api/transactions", {
-        method: "POST",
+      const url = mode === "edit" 
+        ? `/api/transactions/${transaction?.id}`
+        : "/api/transactions";
+      const method = mode === "edit" ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          description: form.description,
+          ...data,
           total_amount: totalAmount,
           installments_count: isCredit ? installmentsCount : 1,
-          purchase_date: form.purchase_date,
-          type: form.type,
-          card_id: form.card_id || null,
-          category_id: form.category_id || null,
-          person_id: form.person_id || null,
-          notes: form.notes || null,
         }),
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? "Erro ao salvar lançamento");
+        const errorData = await res.json();
+
+        if (errorData.error?.fieldErrors) {
+          Object.entries(errorData.error.fieldErrors).forEach(([key, msgs]: [string, any]) => {
+            form.setError(key as any, { message: msgs[0] });
+          });
+          return;
+        }
+
+        form.setError("root", { message: errorData.error ?? "Erro ao salvar lançamento" });
         return;
       }
 
       router.refresh();
       onSuccess();
     } catch {
-      setError("Erro de conexão");
-    } finally {
-      setLoading(false);
+      form.setError("root", { message: "Erro de conexão" });
     }
   }
 
   return (
-    <div className="flex flex-col gap-5 p-5">
-      {/* Tipo */}
+    <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-5 p-5">
+      {/* Root error */}
+      {form.formState.errors.root && (
+        <div className="text-sm text-red-500">
+          {form.formState.errors.root.message}
+        </div>
+      )}
+
+      {/* Type */}
       <div className="flex flex-col gap-1.5">
         <Label>Tipo</Label>
         <div className="grid grid-cols-4 gap-1.5">
@@ -161,12 +198,13 @@ export function TransactionForm({ onSuccess }: Props) {
               key={t.value}
               type="button"
               onClick={() => {
-                set("type", t.value);
-                if (t.value !== "credit") set("installments_count", "1");
-                if (t.value === "pix" || t.value === "cash") set("card_id", "");
+                form.setValue("type", t.value as any);
+                if (t.value !== "credit") {
+                  form.setValue("installments_count", 1);
+                }
               }}
               className={`rounded-lg border py-2 text-xs transition-colors ${
-                form.type === t.value
+                typeValue === t.value
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border hover:bg-accent text-muted-foreground"
               }`}
@@ -177,18 +215,22 @@ export function TransactionForm({ onSuccess }: Props) {
         </div>
       </div>
 
-      {/* Descrição */}
+      {/* Description */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="description">Descrição</Label>
         <Input
           id="description"
           placeholder="Ex: Mercado, Netflix..."
-          value={form.description}
-          onChange={(e) => set("description", e.target.value)}
+          {...form.register("description")}
         />
+        {form.formState.errors.description && (
+          <span className="text-sm text-red-500">
+            {form.formState.errors.description.message}
+          </span>
+        )}
       </div>
 
-      {/* Valor + Data */}
+      {/* Amount + Date */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="amount">Valor total</Label>
@@ -213,24 +255,33 @@ export function TransactionForm({ onSuccess }: Props) {
                 const digits = e.target.value.replace(/\D/g, "");
                 const value = parseInt(digits || "0", 10);
                 setCents(value);
-                set("total_amount", (value / 100).toString());
+                form.setValue("total_amount", value / 100);
               }}
             />
           </div>
+          {form.formState.errors.total_amount && (
+            <span className="text-sm text-red-500">
+              {form.formState.errors.total_amount.message}
+            </span>
+          )}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="date">Data da compra</Label>
           <Input
             id="date"
             type="date"
-            value={form.purchase_date}
-            onChange={(e) => set("purchase_date", e.target.value)}
+            {...form.register("purchase_date")}
           />
+          {form.formState.errors.purchase_date && (
+            <span className="text-sm text-red-500">
+              {form.formState.errors.purchase_date.message}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Parcelas + Cartão — só aparece no crédito */}
-      {(isCredit || form.type === "debit") && (
+      {/* Installments + Card */}
+      {(isCredit || typeValue === "debit") && (
         <div className="grid grid-cols-2 gap-3">
           {isCredit && (
             <div className="flex flex-col gap-1.5">
@@ -240,9 +291,15 @@ export function TransactionForm({ onSuccess }: Props) {
                 type="number"
                 min="1"
                 max="24"
-                value={form.installments_count}
-                onChange={(e) => set("installments_count", e.target.value)}
+                {...form.register("installments_count", {
+                  valueAsNumber: true,
+                })}
               />
+              {form.formState.errors.installments_count && (
+                <span className="text-sm text-red-500">
+                  {form.formState.errors.installments_count.message}
+                </span>
+              )}
             </div>
           )}
           <div
@@ -250,16 +307,15 @@ export function TransactionForm({ onSuccess }: Props) {
           >
             <Label>Cartão</Label>
             <Select
-              value={form.card_id}
-              onValueChange={(v) => set("card_id", v === "none" ? "" : v)}
+              value={form.watch("card_id") ?? ""}
+              onValueChange={(value) => {
+                form.setValue("card_id", value === "" ? null : value);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Opcional" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">
-                  <span className="text-muted-foreground">Nenhum</span>
-                </SelectItem>
                 {cards.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -267,11 +323,16 @@ export function TransactionForm({ onSuccess }: Props) {
                 ))}
               </SelectContent>
             </Select>
+            {form.formState.errors.card_id && (
+              <span className="text-sm text-red-500">
+                {form.formState.errors.card_id.message}
+              </span>
+            )}
           </div>
         </div>
       )}
 
-      {/* Preview do valor por parcela */}
+      {/* Preview */}
       {isCredit && amountPerInstallment && installmentsCount > 1 && (
         <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5">
           <span className="text-xs text-muted-foreground">
@@ -283,21 +344,20 @@ export function TransactionForm({ onSuccess }: Props) {
         </div>
       )}
 
-      {/* Categoria + Pessoa */}
+      {/* Category + Person */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label>Categoria</Label>
           <Select
-            value={form.category_id}
-            onValueChange={(v) => set("category_id", v === "none" ? "" : v)}
+            value={form.watch("category_id") ?? ""}
+            onValueChange={(value) => {
+              form.setValue("category_id", value === "" ? null : value);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Opcional" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">
-                <span className="text-muted-foreground">Nenhuma</span>
-              </SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.icon} {c.name}
@@ -305,20 +365,24 @@ export function TransactionForm({ onSuccess }: Props) {
               ))}
             </SelectContent>
           </Select>
+          {form.formState.errors.category_id && (
+            <span className="text-sm text-red-500">
+              {form.formState.errors.category_id.message}
+            </span>
+          )}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>Pessoa</Label>
           <Select
-            value={form.person_id}
-            onValueChange={(v) => set("person_id", v === "none" ? "" : v)}
+            value={form.watch("person_id") ?? ""}
+            onValueChange={(value) => {
+              form.setValue("person_id", value === "" ? null : value);
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Opcional" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">
-                <span className="text-muted-foreground">Nenhuma</span>
-              </SelectItem>
               {people.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}
@@ -326,32 +390,43 @@ export function TransactionForm({ onSuccess }: Props) {
               ))}
             </SelectContent>
           </Select>
+          {form.formState.errors.person_id && (
+            <span className="text-sm text-red-500">
+              {form.formState.errors.person_id.message}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Observações */}
+      {/* Notes */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="notes">Observações</Label>
         <textarea
           id="notes"
           placeholder="Opcional..."
-          value={form.notes}
-          onChange={(e) => set("notes", e.target.value)}
+          {...form.register("notes")}
           className="min-h-[72px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
+        {form.formState.errors.notes && (
+          <span className="text-sm text-red-500">
+            {form.formState.errors.notes.message}
+          </span>
+        )}
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      {/* Ações */}
+      {/* Actions */}
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
-        <Button variant="outline" onClick={onSuccess} disabled={loading}>
+        <Button variant="outline" onClick={close} disabled={form.formState.isSubmitting}>
           Cancelar
         </Button>
-        <Button onClick={handleSubmit} disabled={loading}>
-          {loading ? "Salvando..." : "Salvar lançamento"}
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting
+            ? "Salvando..."
+            : mode === "edit"
+            ? "Atualizar"
+            : "Salvar lançamento"}
         </Button>
       </div>
-    </div>
+    </form>
   );
 }

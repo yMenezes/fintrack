@@ -82,34 +82,119 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
 ### API Routes
 
 Every API route must:
-1. Validate the request body with Zod before touching the database
-2. Return consistent error responses
+1. Validate the request body with Zod schema from `lib/validations.ts`
+2. Return consistent error responses (422 for validation, 401 for auth, 500 for server errors)
 3. Check that the authenticated user owns the resource before modifying it
+4. Use status codes correctly (201 for POST, 422 for validation errors)
 
 ```ts
 // app/api/cards/route.ts — standard structure
-export async function POST(request: Request) {
-  // 1. Auth check
-  const supabase = createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+import { cardCreateSchema } from '@/lib/validations'
 
-  // 2. Validate body
-  const body = await request.json()
-  const result = cardSchema.safeParse(body)
-  if (!result.success) {
-    return NextResponse.json({ error: result.error.flatten() }, { status: 400 })
+export async function POST(request: Request) {
+  // 1. Auth check first
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  // 3. Insert (RLS ensures user_id is always the authenticated user)
+  // 2. Validate body with centralized schema
+  const body = await request.json()
+  const result = cardCreateSchema.safeParse(body)
+  
+  if (!result.success) {
+    // Return field-level errors so client can show per-field messages
+    return NextResponse.json(
+      { error: result.error.flatten().fieldErrors },
+      { status: 422 }
+    )
+  }
+
+  // 3. Database operation (RLS ensures user_id is always the authenticated user)
   const { data, error } = await supabase
     .from('cards')
     .insert({ ...result.data, user_id: user.id })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
   return NextResponse.json(data, { status: 201 })
+}
+```
+
+### Form Components with React Hook Form
+
+All forms use React Hook Form with Zod resolver for consistent validation:
+
+```tsx
+// components/cards/CardFormDialog.tsx
+'use client'
+
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { cardCreateSchema, type CardInput } from '@/lib/validations'
+
+type CardFormDialogProps = {
+  open: boolean
+  onClose: () => void
+  card?: Card // for edit mode
+}
+
+export function CardFormDialog({ open, onClose, card }: CardFormDialogProps) {
+  const form = useForm<CardInput>({
+    resolver: zodResolver(card ? cardUpdateSchema : cardCreateSchema),
+    defaultValues: { /* ... */ }
+  })
+
+  // Pre-fill when editing
+  useEffect(() => {
+    if (open && card) {
+      form.reset(card)
+    }
+  }, [open, card, form])
+
+  async function handleSubmit(data: CardInput) {
+    const url = card ? `/api/cards/${card.id}` : '/api/cards'
+    const method = card ? 'PATCH' : 'POST'
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+
+    if (!res.ok) {
+      const errorData = await res.json()
+      
+      // Handle server validation errors
+      if (errorData.error?.fieldErrors) {
+        Object.entries(errorData.error.fieldErrors).forEach(([key, msgs]) => {
+          form.setError(key as any, { message: msgs[0] })
+        })
+        return
+      }
+
+      form.setError('root', { message: errorData.error ?? 'Erro ao salvar' })
+      return
+    }
+
+    router.refresh()
+    onClose()
+    form.reset()
+  }
+
+  return (
+    <form onSubmit={form.handleSubmit(handleSubmit)}>
+      {/* Fields with form.register() */}
+      {form.formState.errors.name && (
+        <span>{form.formState.errors.name.message}</span>
+      )}
+    </form>
+  )
 }
 ```
 
@@ -122,6 +207,7 @@ export async function POST(request: Request) {
 | Files (API routes) | lowercase | `route.ts` |
 | Variables/functions | camelCase | `getCardById` |
 | Types/interfaces | PascalCase | `Transaction`, `CardInput` |
+| Zod schemas | camelCase with Suffix | `cardCreateSchema`, `cardUpdateSchema` |
 | Database columns | snake_case | `closing_day`, `user_id` |
 | CSS classes | Tailwind utilities only | `text-sm font-medium` |
 

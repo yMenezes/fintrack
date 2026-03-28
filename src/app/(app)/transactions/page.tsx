@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
+import { TransactionDataProvider } from '@/providers/TransactionDataProvider'
 
 type SearchParams = {
   month?:       string
@@ -62,14 +63,20 @@ export default async function TransactionsPage({
   ])
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="mb-5 text-lg font-medium">Lançamentos</h1>
-      <TransactionFilters
-        cards={cardsRes.data ?? []}
-        categories={catsRes.data ?? []}
-        people={peopleRes.data ?? []}
-      />
-      <TransactionList transactions={(transactions ?? []) as any} />
-    </div>
+    <TransactionDataProvider 
+      cards={cardsRes.data ?? []}
+      categories={catsRes.data ?? []}
+      people={peopleRes.data ?? []}
+    >
+      <div className="mx-auto max-w-3xl">
+        <h1 className="mb-5 text-lg font-medium">Lançamentos</h1>
+        <TransactionFilters
+          cards={cardsRes.data ?? []}
+          categories={catsRes.data ?? []}
+          people={peopleRes.data ?? []}
+        />
+        <TransactionList transactions={(transactions ?? []) as any} />
+      </div>
+    </TransactionDataProvider>
   )
 }
