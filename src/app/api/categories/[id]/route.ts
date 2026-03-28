@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { categoryUpdateSchema } from '@/lib/validations'
 
 export async function PATCH(
@@ -28,5 +29,6 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  revalidatePath('/categories')
   return NextResponse.json(data)
 }

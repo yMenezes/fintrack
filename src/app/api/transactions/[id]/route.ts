@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { transactionUpdateSchema } from '@/lib/validations'
 import { generateInstallments } from '@/lib/installments'
 
@@ -115,5 +116,6 @@ export async function PATCH(
     if (instError) return NextResponse.json({ error: instError.message }, { status: 500 })
   }
 
+  revalidatePath('/invoices')
   return NextResponse.json({ success: true })
 }

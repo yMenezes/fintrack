@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { personCreateSchema } from '@/lib/validations'
 
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  revalidatePath('/people')
   return NextResponse.json(data, { status: 201 })
 }
 
