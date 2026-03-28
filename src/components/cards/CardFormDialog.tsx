@@ -103,8 +103,11 @@ export function CardFormDialog({ open, onClose, card }: Props) {
         
         // Handle Zod validation errors from server
         if (errorData.error?.fieldErrors) {
+          const validFields = ['name', 'brand', 'closing_day', 'due_day', 'limit_amount', 'color'] as const;
           Object.entries(errorData.error.fieldErrors).forEach(([key, msgs]: [string, any]) => {
-            form.setError(key as any, { message: msgs[0] });
+            if (validFields.includes(key as any)) {
+              form.setError(key as keyof CardInput, { message: msgs[0] });
+            }
           });
           return;
         }

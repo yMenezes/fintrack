@@ -20,10 +20,10 @@ import {
 import { TransactionFormSkeleton } from "./TransactionFormSkeleton";
 
 const TYPES = [
-  { value: "credit", label: "Crédito" },
-  { value: "debit", label: "Débito" },
-  { value: "pix", label: "Pix" },
-  { value: "cash", label: "Dinheiro" },
+  { value: 'credit' as const, label: 'Crédito' },
+  { value: 'debit' as const, label: 'Débito' },
+  { value: 'pix' as const, label: 'Pix' },
+  { value: 'cash' as const, label: 'Dinheiro' },
 ];
 
 type Card = { id: string; name: string; closing_day: number };
@@ -115,12 +115,18 @@ export function TransactionForm({ onSuccess }: Props) {
   // Reset form to defaults or pre-fill with transaction data in edit mode
   useEffect(() => {
     if (mode === 'edit' && transaction) {
+      // Valida que o type é um dos valores permitidos
+      const validTypes = ['credit', 'debit', 'pix', 'cash'] as const
+      const txType = validTypes.includes(transaction.type as any) 
+        ? (transaction.type as TransactionInput['type'])
+        : 'credit'
+      
       form.reset({
         description: transaction.description,
         total_amount: transaction.total_amount,
         installments_count: transaction.installments_count,
         purchase_date: transaction.purchase_date.split('T')[0],
-        type: transaction.type as any,
+        type: txType,
         card_id: transaction.card_id,
         category_id: transaction.category_id,
         person_id: transaction.person_id,
@@ -178,8 +184,11 @@ export function TransactionForm({ onSuccess }: Props) {
         const errorData = await res.json();
 
         if (errorData.error?.fieldErrors) {
+          const validFields = ['description', 'total_amount', 'installments_count', 'purchase_date', 'type', 'card_id', 'category_id', 'person_id', 'notes'] as const;
           Object.entries(errorData.error.fieldErrors).forEach(([key, msgs]: [string, any]) => {
-            form.setError(key as any, { message: msgs[0] });
+            if (validFields.includes(key as any)) {
+              form.setError(key as keyof TransactionInput, { message: msgs[0] });
+            }
           });
           return;
         }
@@ -214,7 +223,7 @@ export function TransactionForm({ onSuccess }: Props) {
               key={t.value}
               type="button"
               onClick={() => {
-                form.setValue("type", t.value as any);
+                form.setValue("type", t.value);
                 if (t.value !== "credit") {
                   form.setValue("installments_count", 1);
                 }

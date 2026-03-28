@@ -91,8 +91,11 @@ export function CategoryFormDialog({ open, onClose, category }: Props) {
         const errorData = await res.json();
         
         if (errorData.error?.fieldErrors) {
+          const validFields = ['name', 'icon', 'color'] as const;
           Object.entries(errorData.error.fieldErrors).forEach(([key, msgs]: [string, any]) => {
-            form.setError(key as any, { message: msgs[0] });
+            if (validFields.includes(key as any)) {
+              form.setError(key as keyof CategoryInput, { message: msgs[0] });
+            }
           });
           return;
         }

@@ -172,8 +172,11 @@ export function CardFormDialog({ open, onClose, card }: CardFormDialogProps) {
       
       // Handle server validation errors
       if (errorData.error?.fieldErrors) {
+        const validFields = ['field1', 'field2', 'field3'] as const
         Object.entries(errorData.error.fieldErrors).forEach(([key, msgs]) => {
-          form.setError(key as any, { message: msgs[0] })
+          if (validFields.includes(key as any)) {
+            form.setError(key as keyof typeof schema.shape, { message: msgs[0] })
+          }
         })
         return
       }

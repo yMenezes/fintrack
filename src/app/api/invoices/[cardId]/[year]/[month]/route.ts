@@ -3,6 +3,51 @@ import { NextResponse } from 'next/server'
 
 type Params = { cardId: string; year: string; month: string }
 
+// Tipos para resposta de installments com transações
+type Card = {
+  id: string
+  name: string
+  color: string
+  closing_day: number
+  due_day: number
+}
+
+type Category = {
+  id: string
+  name: string
+  icon: string
+  color: string
+}
+
+type Transaction = {
+  id: string
+  description: string
+  installments_count: number
+  purchase_date: string
+  type: string
+  card_id: string | null
+  cards: Card[] | null
+  categories: Category[] | null
+}
+
+type Installment = {
+  id: string
+  number: number
+  amount: number
+  paid: boolean
+  reference_month: number
+  reference_year: number
+  transactions: Transaction[] | null
+}
+
+type InstallmentWithTransactionRef = {
+  id: string
+  transactions: Array<{
+    card_id: string | null
+    user_id: string
+  }>
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Params }
@@ -67,10 +112,12 @@ export async function GET(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Filtra resultados onde a transação pertence ao usuário
-  const filtered = (data ?? []).filter(
-    (i: any) => i.transactions?.cards || isAll
-  )
+  // Filtra resultados onde a transação pertence ao usuário e tem cartão válido
+  const filtered = (data as Installment[] ?? []).filter((i) => {
+    if (isAll) return true
+    const tx = i.transactions?.[0]
+    return tx?.cards && tx.cards.length > 0
+  })
 
   const totalCount = total ?? 0
   const hasMore = (page * limit) < totalCount
@@ -108,9 +155,12 @@ export async function PATCH(
 
   if (!installments?.length) return NextResponse.json({ updated: 0 })
 
-  const ids = installments
-    .filter((i: any) => cardId === 'all' || i.transactions.card_id === cardId)
-    .map((i: any) => i.id)
+  const ids = (installments as InstallmentWithTransactionRef[])
+    .filter((i) => {
+      const tx = i.transactions[0]
+      return cardId === 'all' || tx?.card_id === cardId
+    })
+    .map((i) => i.id)
 
   const { error } = await supabase
     .from('installments')
