@@ -151,12 +151,12 @@ export function CardFormDialog({ open, onClose, card }: Props) {
           {/* Bandeira */}
           <div className="flex flex-col gap-1.5">
             <Label>Bandeira</Label>
-            <Select value={form.watch("brand") ?? ""} onValueChange={(v) => form.setValue("brand", v)}>
+            <Select value={form.watch("brand") ?? "none"} onValueChange={(v) => form.setValue("brand", v === "none" ? "" : v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a bandeira" />
+                <SelectValue placeholder="Selecione a bandeira (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sem bandeira</SelectItem>
+                <SelectItem value="none">Sem bandeira</SelectItem>
                 {BRANDS.map((b) => (
                   <SelectItem key={b} value={b}>
                     {b}
