@@ -382,15 +382,16 @@ export function TransactionForm({ onSuccess }: Props) {
           >
             <Label>Cartão</Label>
             <Select
-              value={form.watch("card_id") ?? ""}
+              value={form.watch("card_id") ?? "none"}
               onValueChange={(value) => {
-                form.setValue("card_id", value === "" ? null : value);
+                form.setValue("card_id", value === "none" ? null : value);
               }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Opcional" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">Sem cartão</SelectItem>
                 {cards.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -424,15 +425,16 @@ export function TransactionForm({ onSuccess }: Props) {
         <div className="flex flex-col gap-1.5">
           <Label>Categoria</Label>
           <Select
-            value={form.watch("category_id") ?? ""}
+            value={form.watch("category_id") ?? "none"}
             onValueChange={(value) => {
-              form.setValue("category_id", value === "" ? null : value);
+              form.setValue("category_id", value === "none" ? null : value);
             }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Opcional" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">Sem categoria</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.icon} {c.name}
@@ -449,15 +451,16 @@ export function TransactionForm({ onSuccess }: Props) {
         <div className="flex flex-col gap-1.5">
           <Label>Pessoa</Label>
           <Select
-            value={form.watch("person_id") ?? ""}
+            value={form.watch("person_id") ?? "none"}
             onValueChange={(value) => {
-              form.setValue("person_id", value === "" ? null : value);
+              form.setValue("person_id", value === "none" ? null : value);
             }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Opcional" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">Sem pessoa</SelectItem>
               {people.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}

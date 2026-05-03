@@ -7,8 +7,15 @@ import {
   CheckCheck,
   LayoutList,
   CalendarDays,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { InvoiceInstallmentRow } from "./InvoiceInstallmentRow";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
@@ -75,6 +82,8 @@ export function InvoicePage({
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, hasMore: false });
   const [activeCard, setActiveCard] = useState<string>("all");
   const [groupMode, setGroupMode] = useState<GroupMode>("category");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [localCard, setLocalCard] = useState("all");
   const currentMonth = month;
   const currentYear = year;
   const router = useRouter();
@@ -231,69 +240,104 @@ export function InvoicePage({
         </p>
       </div>
 
-      {/* Navegador de mês */}
-      <div className="flex items-center gap-3 mb-5">
+      {/* Navegador de mês + filtro */}
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card px-2 py-1.5">
+          <button
+            onClick={prevMonth}
+            className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent transition-colors"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <span className="min-w-[130px] text-center text-xs font-medium">
+            {MONTHS[currentMonth - 1]} de {currentYear}
+          </span>
+          <button
+            onClick={nextMonth}
+            className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent transition-colors"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
         <button
-          onClick={prevMonth}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-accent"
+          onClick={() => { setLocalCard(activeCard); setFilterOpen(true); }}
+          className="relative flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-medium hover:bg-accent transition-colors"
         >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="min-w-[140px] text-center text-sm font-medium">
-          {MONTHS[currentMonth - 1]} de {currentYear}
-        </span>
-        <button
-          onClick={nextMonth}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border hover:bg-accent"
-        >
-          <ChevronRight className="h-4 w-4" />
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Filtrar
+          {activeCard !== "all" && (
+            <span className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+              1
+            </span>
+          )}
         </button>
       </div>
 
-      {/* Tabs de cartão */}
-      <div className="flex gap-2 mb-5 flex-wrap">
-        {cards.map((card) => (
-          <button
-            key={card.id}
-            onClick={() => {
-              setActiveCard(card.id);
-              setPage(1);
-            }}
-            className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all"
-            style={
-              activeCard === card.id
-                ? {
-                    background: card.color,
-                    borderColor: card.color,
-                    color: "white",
-                  }
-                : {}
-            }
-          >
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{
-                background:
-                  activeCard === card.id ? "rgba(255,255,255,0.6)" : card.color,
-              }}
-            />
-            {card.name}
-          </button>
-        ))}
-        <button
-          onClick={() => {
-            setActiveCard("all");
-            setPage(1);
-          }}
-          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-            activeCard === "all"
-              ? "bg-foreground text-background border-foreground"
-              : "border-border text-muted-foreground"
-          }`}
-        >
-          Todos
-        </button>
-      </div>
+      {/* Modal de filtro */}
+      {filterOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setFilterOpen(false)}
+          />
+          <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold">Filtros</h3>
+              <button
+                onClick={() => setFilterOpen(false)}
+                className="p-1 rounded-md hover:bg-accent transition-colors"
+                aria-label="Fechar filtros"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs">Cartão</Label>
+              <Select value={localCard} onValueChange={setLocalCard}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os cartões" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os cartões</SelectItem>
+                  {cards.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="h-2 w-2 rounded-full shrink-0"
+                          style={{ background: c.color }}
+                        />
+                        {c.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2 mt-6 pt-5 border-t border-border">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setLocalCard("all")}
+              >
+                Limpar
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  setActiveCard(localCard);
+                  setPage(1);
+                  setFilterOpen(false);
+                }}
+              >
+                Aplicar filtros
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Header da fatura */}
       <div

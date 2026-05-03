@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 const navSections = [
   {
@@ -58,10 +59,11 @@ export function Sidebar() {
     <aside className="flex h-full w-[220px] flex-col border-r border-border bg-card">
       {/* Logo */}
       <div className="flex items-center gap-2.5 border-b border-border px-4 py-[18px]">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500">
-          <TrendingUp className="h-4 w-4 text-white" />
+        <Image src="/financecontrol-favicon.svg" alt="FinanceControl" width={32} height={32}/>
+        <div className="flex flex-col leading-tight">
+          <span className="text-[14px] font-medium">Finance Control</span>
+          <span className="text-[10px] text-muted-foreground">by Menezes Tech Solutions</span>
         </div>
-        <span className="text-[15px] font-medium">FinTrack</span>
       </div>
 
       {/* Nav */}

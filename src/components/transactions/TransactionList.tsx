@@ -174,28 +174,24 @@ export function TransactionList({
     <>
       {/* Métricas */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          {
-            label: "Total do período",
-            value: total.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            }),
-          },
-          { label: "Lançamentos", value: pagination.total },
-          {
-            label: "Média por compra",
-            value: average.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            }),
-          },
-        ].map((m) => (
-          <div key={m.label} className="rounded-lg bg-muted px-4 py-3">
-            <p className="text-xs text-muted-foreground mb-1">{m.label}</p>
-            <p className="text-lg font-medium">{m.value}</p>
-          </div>
-        ))}
+        <div className="rounded-xl border border-blue-200/50 dark:border-blue-800/50 bg-gradient-to-br from-blue-500/10 to-blue-500/5 px-3 py-3 sm:px-4 sm:py-4 overflow-hidden">
+          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">Total do período</p>
+          <p className="text-sm sm:text-xl font-bold mt-1 sm:mt-2 text-blue-600 dark:text-blue-400 truncate">
+            {total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </p>
+        </div>
+        <div className="rounded-xl border border-emerald-200/50 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 px-3 py-3 sm:px-4 sm:py-4 overflow-hidden">
+          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">Lançamentos</p>
+          <p className="text-sm sm:text-xl font-bold mt-1 sm:mt-2 text-emerald-600 dark:text-emerald-400">
+            {pagination.total}
+          </p>
+        </div>
+        <div className="rounded-xl border border-purple-200/50 dark:border-purple-800/50 bg-gradient-to-br from-purple-500/10 to-purple-500/5 px-3 py-3 sm:px-4 sm:py-4 overflow-hidden">
+          <p className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">Média</p>
+          <p className="text-sm sm:text-xl font-bold mt-1 sm:mt-2 text-purple-600 dark:text-purple-400 truncate">
+            {average.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          </p>
+        </div>
       </div>
 
       {/* Lista agrupada por data */}
@@ -226,54 +222,27 @@ export function TransactionList({
                       <span className="text-sm font-medium truncate">
                         {t.description}
                       </span>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span
-                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${typeBadge.className}`}
-                        >
+                      <div className="flex items-center gap-1.5 mt-0.5 min-w-0 overflow-hidden">
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${typeBadge.className}`}>
                           {typeBadge.label}
                         </span>
                         {t.status === 'scheduled' && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400">
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400">
                             Agendado
                           </span>
                         )}
-                        {t.cards && (
-                          <>
-                            <span className="text-muted-foreground/40 text-xs">
-                              ·
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {t.cards.name}
-                            </span>
-                          </>
-                        )}
-                        {t.categories && (
-                          <>
-                            <span className="text-muted-foreground/40 text-xs">
-                              ·
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {t.categories.name}
-                            </span>
-                          </>
-                        )}
-                        {t.people && (
-                          <>
-                            <span className="text-muted-foreground/40 text-xs">
-                              ·
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {t.people.name}
-                            </span>
-                          </>
+                        {(t.cards || t.categories || t.people) && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            {[t.cards?.name, t.categories?.name, t.people?.name].filter(Boolean).join(' · ')}
+                          </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Valor + parcelas com animação */}
-                    <div className="flex items-center gap-1">
-                      <div className="text-right transition-all duration-200 group-hover:translate-x-[-4px] group-hover:opacity-60">
-                        <p className="text-sm font-medium">
+                    {/* Valor + parcelas + ações */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <div className="text-right sm:transition-all sm:duration-200 sm:group-hover:translate-x-[-4px] sm:group-hover:opacity-60">
+                        <p className="text-sm font-medium tabular-nums">
                           {t.total_amount.toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL",
@@ -286,23 +255,23 @@ export function TransactionList({
                         </p>
                       </div>
 
-                      {/* Ações — aparecem no hover */}
-                      <div className="flex gap-1 opacity-0 translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0">
+                      {/* Ações — hover no desktop, sempre visível no mobile */}
+                      <div className="flex gap-0.5 sm:opacity-0 sm:translate-x-2 sm:transition-all sm:duration-200 sm:group-hover:opacity-100 sm:group-hover:translate-x-0">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
                           onClick={() => open(t)}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
                           onClick={() => setDeleteTarget(t)}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         </Button>
                       </div>
                     </div>
