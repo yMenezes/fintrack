@@ -10,8 +10,11 @@ const inter = Inter({ subsets: ["latin"] });
 // Metadata é usada pelo Next.js para gerar as tags <title> e <meta> do HTML
 // Aparece na aba do browser e nos resultados de busca (SEO)
 export const metadata: Metadata = {
-  title: "FinTrack",
-  description: "Controle de gastos pessoais com cartão de crédito",
+  title: "Finance Control",
+  description: "Controle total da sua vida financeira em um só lugar",
+  icons:{
+    icon: '/financecontrol-favicon.svg'
+  }
 };
 
 // Root Layout — envolve TODAS as páginas da aplicação

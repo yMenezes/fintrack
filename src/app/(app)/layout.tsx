@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* Coluna direita: navbar + conteúdo */}
           <div className="flex flex-1 flex-col min-w-0">
             <Navbar />
-            <main className="flex-1 overflow-y-auto p-6">{children}</main>
+            <main className="flex-1 overflow-y-auto min-h-0 p-6 pb-12 md:pb-6">{children}</main>
           </div>
         </div>
         <TransactionPanel />
