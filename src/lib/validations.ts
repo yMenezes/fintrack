@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+const TRANSACTION_STATUS = ['posted', 'scheduled', 'cancelled'] as const
+const TRANSACTION_SCHEDULE_SOURCE = ['manual', 'recurring'] as const
+
 // ──────────────────────────────────────────────────────────────
 // CARDS
 // ──────────────────────────────────────────────────────────────
@@ -51,19 +54,41 @@ export type PersonUpdateInput = z.infer<typeof personUpdateSchema>
 // TRANSACTIONS
 // ──────────────────────────────────────────────────────────────
 
-export const transactionCreateSchema = z.object({
+const todayIsoDate = () => new Date().toISOString().split('T')[0]
+
+export const transactionStatusSchema = z.enum(TRANSACTION_STATUS)
+export const transactionScheduleSourceSchema = z.enum(TRANSACTION_SCHEDULE_SOURCE)
+
+const transactionFieldsSchema = {
   description: z.string().min(1, 'Descrição obrigatória'),
   total_amount: z.number().positive('Valor deve ser positivo'),
   installments_count: z.number().int().min(1).max(60, 'Limite de parcelas: 1-60'),
   purchase_date: z.string().date('Data inválida'),
   type: z.enum(['credit', 'debit', 'pix', 'cash']),
+  status: transactionStatusSchema.default('posted'),
+  scheduled_for: z.string().date('Data agendada inválida').optional().nullable(),
+  schedule_source: transactionScheduleSourceSchema.default('manual'),
   card_id: z.string().uuid('ID do cartão inválido').optional().nullable(),
   category_id: z.string().uuid('ID da categoria inválido').optional().nullable(),
   person_id: z.string().uuid('ID da pessoa inválido').optional().nullable(),
   notes: z.string().optional().nullable(),
+}
+
+export const transactionCreateSchema = z.object(transactionFieldsSchema).superRefine((data, ctx) => {
+  if (data.status === 'scheduled') {
+    const effectiveScheduledFor = data.scheduled_for ?? data.purchase_date
+
+    if (effectiveScheduledFor < todayIsoDate()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['scheduled_for'], message: 'Data agendada deve ser hoje ou no futuro' })
+    }
+
+    if (data.purchase_date !== effectiveScheduledFor) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['purchase_date'], message: 'Data da compra deve совпidir com a data agendada' })
+    }
+  }
 })
 
-export const transactionUpdateSchema = transactionCreateSchema.partial()
+export const transactionUpdateSchema = z.object(transactionFieldsSchema).partial()
 
 export type TransactionInput = z.infer<typeof transactionCreateSchema>
 export type TransactionUpdateInput = z.infer<typeof transactionUpdateSchema>

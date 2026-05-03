@@ -119,6 +119,11 @@ export type Database = {
           installments_count: number
           purchase_date: string
           type: 'credit' | 'debit' | 'pix' | 'cash'
+          status: 'posted' | 'scheduled' | 'cancelled'
+          scheduled_for: string | null
+          posted_at: string | null
+          cancelled_at: string | null
+          schedule_source: 'manual' | 'recurring'
           card_id: string | null
           category_id: string | null
           person_id: string | null
@@ -135,6 +140,11 @@ export type Database = {
           installments_count: number
           purchase_date: string
           type: 'credit' | 'debit' | 'pix' | 'cash'
+          status?: 'posted' | 'scheduled' | 'cancelled'
+          scheduled_for?: string | null
+          posted_at?: string | null
+          cancelled_at?: string | null
+          schedule_source?: 'manual' | 'recurring'
           card_id?: string | null
           category_id?: string | null
           person_id?: string | null
@@ -151,6 +161,11 @@ export type Database = {
           installments_count?: number
           purchase_date?: string
           type?: 'credit' | 'debit' | 'pix' | 'cash'
+          status?: 'posted' | 'scheduled' | 'cancelled'
+          scheduled_for?: string | null
+          posted_at?: string | null
+          cancelled_at?: string | null
+          schedule_source?: 'manual' | 'recurring'
           card_id?: string | null
           category_id?: string | null
           person_id?: string | null
@@ -203,6 +218,8 @@ export type Database = {
     Functions: Record<string, unknown>
     Enums: {
       transaction_type: 'credit' | 'debit' | 'pix' | 'cash'
+      transaction_status: 'posted' | 'scheduled' | 'cancelled'
+      transaction_schedule_source: 'manual' | 'recurring'
     }
   }
 }

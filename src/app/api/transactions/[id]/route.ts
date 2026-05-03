@@ -38,7 +38,15 @@ export async function PATCH(
     parsed.data.installments_count !== undefined ||
     parsed.data.purchase_date !== undefined ||
     parsed.data.type !== undefined ||
-    parsed.data.card_id !== undefined
+    parsed.data.card_id !== undefined ||
+    parsed.data.status !== undefined
+
+  const resolvedStatus = parsed.data.status ?? currentTx.status
+  const resolvedScheduledFor =
+    parsed.data.scheduled_for !== undefined
+      ? parsed.data.scheduled_for
+      : currentTx.scheduled_for
+  const nowIso = new Date().toISOString()
 
   // 1. Preparar dados para update (pegar valores atuais se não fornecidos)
   const updateData = {
@@ -47,6 +55,17 @@ export async function PATCH(
     installments_count: parsed.data.installments_count ?? currentTx.installments_count,
     purchase_date: parsed.data.purchase_date ?? currentTx.purchase_date,
     type: parsed.data.type ?? currentTx.type,
+    status: resolvedStatus,
+    scheduled_for: resolvedStatus === 'scheduled' ? resolvedScheduledFor : null,
+    posted_at:
+      resolvedStatus === 'posted'
+        ? currentTx.posted_at ?? nowIso
+        : currentTx.posted_at,
+    cancelled_at:
+      resolvedStatus === 'cancelled'
+        ? currentTx.cancelled_at ?? nowIso
+        : currentTx.cancelled_at,
+    schedule_source: parsed.data.schedule_source ?? currentTx.schedule_source ?? 'manual',
     card_id: parsed.data.card_id !== undefined ? parsed.data.card_id : currentTx.card_id,
     category_id: parsed.data.category_id !== undefined ? parsed.data.category_id : currentTx.category_id,
     person_id: parsed.data.person_id !== undefined ? parsed.data.person_id : currentTx.person_id,
@@ -63,7 +82,7 @@ export async function PATCH(
   if (txError) return NextResponse.json({ error: txError.message }, { status: 500 })
 
   // 3. Regenerar parcelas apenas se necessário
-  if (needsRegenerate) {
+  if (resolvedStatus === 'posted' && needsRegenerate) {
     // Fetch parcelas antigas para preservar status paid
     const { data: oldInstallments } = await supabase
       .from('installments')
@@ -114,6 +133,14 @@ export async function PATCH(
       .insert(installmentsWithPaid)
 
     if (instError) return NextResponse.json({ error: instError.message }, { status: 500 })
+  } else if (resolvedStatus !== 'posted') {
+    // Agendado ou cancelado não deve manter parcelas ativas
+    const { error: delError } = await supabase
+      .from('installments')
+      .delete()
+      .eq('transaction_id', params.id)
+
+    if (delError) return NextResponse.json({ error: delError.message }, { status: 500 })
   }
 
   revalidatePath('/invoices')

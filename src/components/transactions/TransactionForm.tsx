@@ -60,6 +60,9 @@ export function TransactionForm({ onSuccess }: Props) {
       installments_count: 1,
       purchase_date: new Date().toISOString().split("T")[0],
       type: "credit",
+      status: "posted",
+      scheduled_for: null,
+      schedule_source: "manual",
       card_id: null,
       category_id: null,
       person_id: null,
@@ -68,8 +71,11 @@ export function TransactionForm({ onSuccess }: Props) {
   });
 
   const typeValue = form.watch("type");
+  const statusValue = form.watch("status");
+  const purchaseDateValue = form.watch("purchase_date");
   const installmentsCountValue = form.watch("installments_count");
   const isCredit = typeValue === "credit";
+  const isScheduled = statusValue === "scheduled";
 
   // Load data from context or fetch locally (only once)
   useEffect(() => {
@@ -127,6 +133,9 @@ export function TransactionForm({ onSuccess }: Props) {
         installments_count: transaction.installments_count,
         purchase_date: transaction.purchase_date.split('T')[0],
         type: txType,
+        status: transaction.status,
+        scheduled_for: transaction.scheduled_for,
+        schedule_source: transaction.schedule_source,
         card_id: transaction.card_id,
         category_id: transaction.category_id,
         person_id: transaction.person_id,
@@ -140,6 +149,9 @@ export function TransactionForm({ onSuccess }: Props) {
         installments_count: 1,
         purchase_date: new Date().toISOString().split("T")[0],
         type: "credit",
+        status: "posted",
+        scheduled_for: null,
+        schedule_source: "manual",
         card_id: null,
         category_id: null,
         person_id: null,
@@ -148,6 +160,19 @@ export function TransactionForm({ onSuccess }: Props) {
       setCents(0);
     }
   }, [mode, transaction?.id]);
+
+  useEffect(() => {
+    if (isScheduled) {
+      if (form.getValues("scheduled_for") !== purchaseDateValue) {
+        form.setValue("scheduled_for", purchaseDateValue, { shouldValidate: false });
+      }
+      return;
+    }
+
+    if (form.getValues("scheduled_for") !== null) {
+      form.setValue("scheduled_for", null, { shouldValidate: false });
+    }
+  }, [isScheduled, purchaseDateValue, form]);
 
   const totalAmount = cents / 100;
   const installmentsCount = installmentsCountValue || 1;
@@ -175,6 +200,10 @@ export function TransactionForm({ onSuccess }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
+          purchase_date: isScheduled ? data.purchase_date : data.purchase_date,
+          scheduled_for: isScheduled ? data.purchase_date : null,
+          status: isScheduled ? 'scheduled' : 'posted',
+          schedule_source: 'manual',
           total_amount: totalAmount,
           installments_count: isCredit ? installmentsCount : 1,
         }),
@@ -184,7 +213,7 @@ export function TransactionForm({ onSuccess }: Props) {
         const errorData = await res.json();
 
         if (errorData.error?.fieldErrors) {
-          const validFields = ['description', 'total_amount', 'installments_count', 'purchase_date', 'type', 'card_id', 'category_id', 'person_id', 'notes'] as const;
+          const validFields = ['description', 'total_amount', 'installments_count', 'purchase_date', 'type', 'status', 'scheduled_for', 'schedule_source', 'card_id', 'category_id', 'person_id', 'notes'] as const;
           Object.entries(errorData.error.fieldErrors).forEach(([key, msgs]: [string, any]) => {
             if (validFields.includes(key as any)) {
               form.setError(key as keyof TransactionInput, { message: msgs[0] });
@@ -240,6 +269,46 @@ export function TransactionForm({ onSuccess }: Props) {
         </div>
       </div>
 
+      {/* Status */}
+      <div className="flex flex-col gap-1.5">
+        <Label>Agendamento</Label>
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              form.setValue('status', 'posted', { shouldValidate: true });
+              form.setValue('scheduled_for', null, { shouldValidate: false });
+            }}
+            className={`rounded-lg border py-2 text-xs transition-colors ${
+              statusValue === 'posted'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border hover:bg-accent text-muted-foreground'
+            }`}
+          >
+            Agora
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              form.setValue('status', 'scheduled', { shouldValidate: true });
+              form.setValue('scheduled_for', purchaseDateValue, { shouldValidate: false });
+            }}
+            className={`rounded-lg border py-2 text-xs transition-colors ${
+              statusValue === 'scheduled'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border hover:bg-accent text-muted-foreground'
+            }`}
+          >
+            Agendar
+          </button>
+        </div>
+        {form.formState.errors.status && (
+          <span className="text-sm text-red-500">
+            {form.formState.errors.status.message}
+          </span>
+        )}
+      </div>
+
       {/* Description */}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="description">Descrição</Label>
@@ -281,6 +350,9 @@ export function TransactionForm({ onSuccess }: Props) {
                 const value = parseInt(digits || "0", 10);
                 setCents(value);
                 form.setValue("total_amount", value / 100);
+                if (isScheduled) {
+                  form.setValue("scheduled_for", form.getValues("purchase_date"), { shouldValidate: false });
+                }
               }}
             />
           </div>
@@ -291,12 +363,17 @@ export function TransactionForm({ onSuccess }: Props) {
           )}
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="date">Data da compra</Label>
+          <Label htmlFor="date">{isScheduled ? 'Data agendada' : 'Data da compra'}</Label>
           <Input
             id="date"
             type="date"
             {...form.register("purchase_date")}
           />
+          {isScheduled && (
+            <p className="text-xs text-muted-foreground">
+              O lançamento ficará pendente até ser executado.
+            </p>
+          )}
           {form.formState.errors.purchase_date && (
             <span className="text-sm text-red-500">
               {form.formState.errors.purchase_date.message}

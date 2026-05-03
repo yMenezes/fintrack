@@ -29,11 +29,20 @@ export async function POST(request: Request) {
     installments_count,
     purchase_date,
     type,
+    status,
+    scheduled_for,
+    schedule_source,
     card_id,
     category_id,
     person_id,
     notes,
   } = parsed.data;
+
+  const resolvedStatus = status ?? 'posted';
+  const resolvedScheduledFor = scheduled_for ?? (resolvedStatus === 'scheduled' ? purchase_date : null);
+  const resolvedScheduleSource = schedule_source ?? 'manual';
+  const resolvedPostedAt = resolvedStatus === 'posted' ? new Date().toISOString() : null;
+  const resolvedCancelledAt = null;
 
   // 1. Cria a transação
   const { data: transaction, error: txError } = await supabase
@@ -45,6 +54,11 @@ export async function POST(request: Request) {
       installments_count,
       purchase_date,
       type,
+      status: resolvedStatus,
+      scheduled_for: resolvedScheduledFor,
+      posted_at: resolvedPostedAt,
+      cancelled_at: resolvedCancelledAt,
+      schedule_source: resolvedScheduleSource,
       card_id: card_id ?? null,
       category_id: category_id ?? null,
       person_id: person_id ?? null,
@@ -56,32 +70,33 @@ export async function POST(request: Request) {
   if (txError)
     return NextResponse.json({ error: txError.message }, { status: 500 });
 
-  // 2. Busca o closing_day do cartão (necessário para calcular as parcelas)
-  let closingDay = 1;
-  if (card_id) {
-    const { data: card } = await supabase
-      .from("cards")
-      .select("closing_day")
-      .eq("id", card_id)
-      .single();
-    if (card) closingDay = card.closing_day;
+  // 2. Apenas transações efetivamente postadas geram parcelas
+  if (resolvedStatus === 'posted') {
+    let closingDay = 1;
+    if (card_id) {
+      const { data: card } = await supabase
+        .from("cards")
+        .select("closing_day")
+        .eq("id", card_id)
+        .single();
+      if (card) closingDay = card.closing_day;
+    }
+
+    const installments = generateInstallments(
+      transaction.id,
+      total_amount,
+      installments_count,
+      new Date(purchase_date),
+      closingDay,
+    );
+
+    const { error: instError } = await supabase
+      .from("installments")
+      .insert(installments);
+
+    if (instError)
+      return NextResponse.json({ error: instError.message }, { status: 500 });
   }
-
-  // 3. Gera e insere as parcelas
-  const installments = generateInstallments(
-    transaction.id,
-    total_amount,
-    installments_count,
-    new Date(purchase_date),
-    closingDay,
-  );
-
-  const { error: instError } = await supabase
-    .from("installments")
-    .insert(installments);
-
-  if (instError)
-    return NextResponse.json({ error: instError.message }, { status: 500 });
 
   revalidatePath("/invoices");
   return NextResponse.json(transaction, { status: 201 });
@@ -119,6 +134,11 @@ export async function GET(request: Request) {
       installments_count,
       purchase_date,
       type,
+      status,
+      scheduled_for,
+      posted_at,
+      cancelled_at,
+      schedule_source,
       notes,
       card_id,
       category_id,

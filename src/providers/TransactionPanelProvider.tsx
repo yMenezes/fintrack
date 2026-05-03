@@ -9,6 +9,11 @@ type Transaction = {
   installments_count: number
   purchase_date:      string
   type:               string
+  status:             'posted' | 'scheduled' | 'cancelled'
+  scheduled_for:      string | null
+  posted_at:          string | null
+  cancelled_at:       string | null
+  schedule_source:    'manual' | 'recurring'
   notes:              string | null
   card_id:            string | null
   category_id:        string | null

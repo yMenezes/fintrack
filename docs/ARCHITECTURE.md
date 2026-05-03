@@ -14,8 +14,10 @@
 - [Row Level Security explained](#row-level-security-explained)
 - [Loading States & Data Sharing Pattern](#loading-states--data-sharing-pattern)
 - [On-Demand ISR Caching Strategy](#on-demand-isr-caching-strategy)
+- [Type Architecture Pattern](#type-architecture-pattern)
 - [Pagination: API and UI](#pagination-api-and-ui)
 - [Installment generation logic](#installment-generation-logic)
+- [Scheduled transactions lifecycle](#scheduled-transactions-lifecycle)
 - [Invoice closing day logic](#invoice-closing-day-logic)
 - [Form validation strategy](#form-validation-strategy)
 - [Folder structure rationale](#folder-structure-rationale)
@@ -355,6 +357,227 @@ This ensures the user sees fresh data immediately after their action, without gu
 
 ---
 
+## Type Architecture Pattern
+
+### Problem
+
+In a typical Supabase app, you might define types based on your full database schema:
+
+```ts
+type Card = {
+  id: string
+  name: string
+  brand?: string
+  closing_day: number
+  due_day: number
+  limit_amount?: number
+  color: string
+  user_id: string
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+}
+```
+
+But real-world pages often query **selective fields**, not the complete schema:
+
+```ts
+// /app/(app)/cards/page.tsx
+const { data: cards } = await supabase
+  .from('cards')
+  .select('id, name, color') // Only 3 fields!
+  .is('deleted_at', null)
+  .eq('user_id', user.id)
+
+// Problem: cards data has type `Card` (expects 11 fields)
+// But query returns only 3 fields — TypeScript false positive mismatch
+```
+
+This forces developers to either:
+1. Use `as any` (type safety lost)
+2. Request all fields even if only 3 are needed (wasteful bandwidth)
+3. Create duplicate types everywhere (unmaintainable)
+
+### Solution: Two-Tier Type System
+
+Instead, maintain **two distinct type levels**:
+
+#### 1. **Complete Schema Types** (`src/types/database.ts`)
+
+Store the full schema from Supabase in one place:
+
+```ts
+// src/types/database.ts — Single source of truth
+
+export type Card = {
+  id: string
+  name: string
+  brand?: string
+  closing_day: number
+  due_day: number
+  limit_amount?: number
+  color: string
+  user_id: string
+  created_at: string
+  updated_at: string
+  deleted_at?: string
+}
+
+export type Transaction = {
+  id: string
+  description: string
+  total_amount: number
+  type: 'credit' | 'debit'
+  purchase_date: string
+  card_id: string
+  category_id: string
+  person_id?: string
+  user_id: string
+  created_at: string
+  updated_at: string
+}
+
+// ... all other tables
+```
+
+**Use case:** 
+- Insert/Update operations that need full record structure
+- API endpoints returning complete records with `select('*')`
+- Form validation that needs all possible fields
+
+#### 2. **Query-Specific Local Types**
+
+For each page/component doing selective queries, define a **local type matching the SELECT fields**:
+
+```tsx
+// app/(app)/cards/page.tsx
+'use client'
+
+type Card = { id: string; name: string; color: string }
+
+export function CardList() {
+  const [cards, setCards] = useState<Card[]>([])
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('cards')
+        .select('id, name, color') // Matches local type exactly
+        .is('deleted_at', null)
+    }
+  }, [])
+
+  return cards.map(card => <CardRow key={card.id} card={card} />)
+}
+```
+
+**Why local types?**
+- ✅ Match the actual query results (no `as any` needed)
+- ✅ TypeScript enforces what you **actually** query
+- ✅ No wasted bandwidth fetching unused fields
+- ✅ Self-documenting — type = query contract
+
+```tsx
+// app/(app)/invoices/page.tsx
+type Card = { id: string; name: string; color: string } // Different subset!
+
+export function InvoicePanel() {
+  const { data: cards } = await supabase
+    .from('cards')
+    .select('id, name, color')
+  
+  // card.brand would be a TypeScript error — we didn't query it
+  // This is good! It catches mistakes at compile time
+}
+```
+
+### Examples Across the Codebase
+
+#### Example 1: TransactionForm (selective fields)
+
+```tsx
+// components/transactions/TransactionForm.tsx
+'use client'
+
+// Local types matching what transactions/page.tsx queries
+type Card = { id: string; name: string }
+type Category = { id: string; name: string; icon: string }
+type Person = { id: string; name: string }
+
+export function TransactionForm({ cards, categories, people }: {
+  cards: Card[]
+  categories: Category[]
+  people: Person[]
+}) {
+  // These components can't access .color, .brand, etc.
+  // Because the parent page didn't query those fields
+  // This is correct and what we want!
+}
+```
+
+#### Example 2: InvoicePage (different selective fields)
+
+```tsx
+// components/invoices/InvoicePage.tsx
+'use client'
+
+type Card = { id: string; name: string; color: string }
+
+export function InvoicePage({ cards }: { cards: Card[] }) {
+  return (
+    <div>
+      {cards.map(card => (
+        <div key={card.id} style={{ borderColor: card.color }}>
+          {card.name} Invoice
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+Note: `Card` here has `color` (displayed in UI) but `TransactionForm.Card` doesn't. Both are correct for their context.
+
+#### Example 3: API Endpoints (full schema)
+
+```ts
+// app/api/transactions/route.ts (GET all transactions)
+
+import type { Transaction } from '@/types/database'
+
+export async function GET(request: Request) {
+  const { data } = await supabase
+    .from('transactions')
+    .select('*') // Full record
+
+  return NextResponse.json(data as Transaction[])
+}
+```
+
+Use the centralized `database.ts` type here because we're returning the complete schema.
+
+### Benefits
+
+| Aspect | Result |
+|---|---|
+| **Type Safety** | ✅ Compile-time errors if query doesn't match type |
+| **No Assertions** | ✅ Zero `as any` needed |
+| **Bandwidth** | ✅ Only fetch fields used |
+| **Maintainability** | ✅ database.ts is single source of truth for schema |
+| **Self-Documentation** | ✅ Type signature = query contract |
+| **Flexibility** | ✅ Different pages can query different subsets |
+
+### Implementation Checklist
+
+- [ ] Define complete schema types in `src/types/database.ts`
+- [ ] For each page/component doing queries, create **local types** matching SELECT fields
+- [ ] Never import `database.ts` types into components doing selective queries
+- [ ] API endpoints returning `select('*')` use `database.ts` types
+- [ ] Form components receive data via props, use local types in prop signatures
+- [ ] Run `npx tsc --noEmit` to verify no `any` assertions exist
+
+---
+
 ## Pagination: API and UI
 
 ### Why Pagination?
@@ -570,6 +793,32 @@ where reference_month = 3
 ```
 
 Using a full `date` column would require date range comparisons, which are harder to reason about.
+
+---
+
+## Scheduled transactions lifecycle
+
+Phase 7 introduced an explicit lifecycle for transactions so planned spending does not pollute real metrics.
+
+### States
+- `posted`: the transaction is real and can generate installments
+- `scheduled`: the transaction is planned for a future date and does not generate installments yet
+- `cancelled`: the transaction will no longer happen
+
+### Core rules
+- Only `posted` transactions generate installments
+- `scheduled` transactions are excluded from invoice totals and dashboard aggregates by default
+- `cancelled` transactions remain available for audit/history but are not treated as active spending
+
+### Why this matters
+- It keeps the invoice view strictly factual
+- It keeps dashboard KPIs honest by separating realized spend from planned spend
+- It prevents duplicate installment generation when a future expense is edited before execution
+
+### UI contract
+- Transaction form has two modes: `Agora` and `Agendar`
+- Dashboard surfaces a separate scheduled-spend summary card
+- Invoice page explicitly states that it only shows realized expenses
 
 ---
 

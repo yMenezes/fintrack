@@ -219,7 +219,17 @@ export function InvoicePage({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-5 text-lg font-medium">Fatura mensal</h1>
+      <div className="mb-5 flex flex-col gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-lg font-medium">Fatura mensal</h1>
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-400">
+            Apenas realizados
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Lançamentos agendados não entram na fatura até serem executados.
+        </p>
+      </div>
 
       {/* Navegador de mês */}
       <div className="flex items-center gap-3 mb-5">

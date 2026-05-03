@@ -62,6 +62,8 @@ create table public.people (
 -- The actual monthly breakdown is in the installments table.
 --
 -- type: 'credit' | 'debit' | 'pix' | 'cash'
+-- status: 'posted' | 'scheduled' | 'cancelled'
+-- schedule_source: 'manual' | 'recurring'
 -- ──────────────────────────────────────────────────────────────
 create table public.transactions (
   id                 uuid primary key default uuid_generate_v4(),
@@ -74,8 +76,18 @@ create table public.transactions (
   installments_count int  not null default 1 check (installments_count >= 1),
   purchase_date      date not null default current_date,
   type               text not null default 'credit',
+  status             text not null default 'posted' check (status in ('posted', 'scheduled', 'cancelled')),
+  scheduled_for      date,
+  posted_at          timestamptz,
+  cancelled_at       timestamptz,
+  schedule_source    text not null default 'manual' check (schedule_source in ('manual', 'recurring')),
   notes              text,
-  created_at         timestamptz default now()
+  created_at         timestamptz default now(),
+  check (
+    (status = 'posted' and posted_at is not null)
+    or (status = 'scheduled' and scheduled_for is not null)
+    or (status = 'cancelled' and cancelled_at is not null)
+  )
 );
 
 -- ──────────────────────────────────────────────────────────────
@@ -125,6 +137,19 @@ create index idx_transactions_person_id on public.transactions(person_id);
 
 -- Get transactions by card
 create index idx_transactions_card_id on public.transactions(card_id);
+
+-- Get transactions by status and date (used for scheduled expenses and real activity)
+create index idx_transactions_status_purchase_date
+  on public.transactions(status, purchase_date);
+
+-- Fast lookup for scheduled items
+create index idx_transactions_scheduled_for
+  on public.transactions(scheduled_for)
+  where status = 'scheduled';
+
+-- Fast lookup for user + status filters
+create index idx_transactions_status_user_id
+  on public.transactions(user_id, status);
 
 
 -- ──────────────────────────────────────────────────────────────

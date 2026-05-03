@@ -48,6 +48,7 @@ export async function GET(
   let countQuery = supabase
     .from('installments')
     .select('id', { count: 'exact', head: true })
+    .eq('transactions.status', 'posted')
     .eq('reference_month', Number(month))
     .eq('reference_year',  Number(year))
 
@@ -78,6 +79,7 @@ export async function GET(
         categories ( id, name, icon, color )
       )
     `)
+    .eq('transactions.status', 'posted')
     .eq('reference_month', Number(month))
     .eq('reference_year',  Number(year))
     .order('created_at', { ascending: true })

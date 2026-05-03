@@ -7,6 +7,8 @@ type SummaryMetrics = {
   totalLastMonth: number
   averagePerDay: number
   topCategory: string | null
+  scheduledThisMonthTotal: number
+  scheduledThisMonthCount: number
 }
 
 async function getDashboardSummary(): Promise<SummaryMetrics> {
@@ -58,22 +60,37 @@ async function getDashboardSummary(): Promise<SummaryMetrics> {
 
   const topCategory = Object.entries(categoryTotals).sort(([, a], [, b]) => b - a)[0]?.[0] ?? null
 
+  // Scheduled expenses for this month
+  const { data: scheduledData } = await supabase
+    .from('transactions')
+    .select('total_amount')
+    .eq('status', 'scheduled')
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .gte('scheduled_for', `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`)
+    .lte('scheduled_for', `${currentYear}-${String(currentMonth).padStart(2, '0')}-${new Date(currentYear, currentMonth, 0).getDate()}`)
+
+  const scheduledThisMonthTotal = (scheduledData ?? []).reduce((sum, item) => sum + item.total_amount, 0)
+  const scheduledThisMonthCount = scheduledData?.length ?? 0
+
   return {
     totalThisMonth,
     totalLastMonth,
     averagePerDay,
-    topCategory
+    topCategory,
+    scheduledThisMonthTotal,
+    scheduledThisMonthCount,
   }
 }
 
 export async function SummaryCards() {
-  const { totalThisMonth, totalLastMonth, averagePerDay, topCategory } = await getDashboardSummary()
+  const { totalThisMonth, totalLastMonth, averagePerDay, topCategory, scheduledThisMonthTotal, scheduledThisMonthCount } = await getDashboardSummary()
 
   const trend = totalThisMonth > totalLastMonth ? 'up' : totalThisMonth < totalLastMonth ? 'down' : 'stable'
   const trendPercent = totalLastMonth > 0 ? ((totalThisMonth - totalLastMonth) / totalLastMonth) * 100 : 0
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {/* Total This Month */}
       <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-xl border border-blue-200/50 dark:border-blue-800/50 p-6 hover:shadow-md transition-all">
         <div className="flex items-start justify-between">
@@ -116,6 +133,15 @@ export async function SummaryCards() {
         <p className="text-sm font-medium text-muted-foreground">Categoria principal</p>
         <p className="text-2xl font-bold mt-3 truncate text-emerald-600 dark:text-emerald-400">{topCategory ?? 'N/A'}</p>
         <p className="text-xs text-muted-foreground mt-3">Este mês</p>
+      </div>
+
+      {/* Scheduled */}
+      <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-6 hover:shadow-md transition-all">
+        <p className="text-sm font-medium text-muted-foreground">Gastos programados</p>
+        <p className="text-3xl font-bold mt-3 text-amber-600 dark:text-amber-400">{scheduledThisMonthCount}</p>
+        <p className="text-xs text-muted-foreground mt-3">
+          {formatCurrency(scheduledThisMonthTotal)} previstos neste mês
+        </p>
       </div>
     </div>
   )

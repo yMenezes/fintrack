@@ -15,6 +15,11 @@ type Transaction = {
   installments_count: number;
   purchase_date: string;
   type: string;
+  status: 'posted' | 'scheduled' | 'cancelled';
+  scheduled_for: string | null;
+  posted_at: string | null;
+  cancelled_at: string | null;
+  schedule_source: 'manual' | 'recurring';
   notes: string | null;
   card_id:            string | null;
   category_id:        string | null;
@@ -227,6 +232,11 @@ export function TransactionList({
                         >
                           {typeBadge.label}
                         </span>
+                        {t.status === 'scheduled' && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400">
+                            Agendado
+                          </span>
+                        )}
                         {t.cards && (
                           <>
                             <span className="text-muted-foreground/40 text-xs">
