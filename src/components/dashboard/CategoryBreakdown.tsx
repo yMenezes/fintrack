@@ -1,6 +1,7 @@
 'use client'
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip } from 'recharts'
+import { formatCurrency } from '@/lib/utils'
 
 export type CategoryData = {
   name: string
@@ -12,96 +13,101 @@ interface CategoryBreakdownProps {
   data: CategoryData[]
 }
 
-export function CategoryBreakdown({ data }: CategoryBreakdownProps) {
-  if (!data || data.length === 0) {
-    return (
-      <div className="bg-gradient-to-br from-card to-card/80 rounded-xl border border-border/50 p-8 h-96 flex items-center justify-center shadow-sm hover:shadow-md transition-shadow">
-        <p className="text-muted-foreground">Nenhum dado disponível</p>
-      </div>
-    )
-  }
+const EMPTY_DATA = [{ name: '', value: 1, color: 'hsl(var(--muted))' }]
 
-  const total = data.reduce((sum, item) => sum + item.value, 0)
+export function CategoryBreakdown({ data }: CategoryBreakdownProps) {
+  const hasData = data && data.length > 0
+  const chartData = hasData ? data : EMPTY_DATA
+  const total = hasData ? data.reduce((sum, item) => sum + item.value, 0) : 0
+  const monthLabel = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date())
 
   return (
-    <div className="bg-gradient-to-br from-card to-card/80 rounded-xl border border-border/50 p-8 shadow-sm hover:shadow-md transition-all">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-semibold">Gastos por categoria</h3>
-          <p className="text-sm text-muted-foreground mt-1">Total: {formatCurrency(total)}</p>
+    <div className="bg-gradient-to-br from-card to-card/80 rounded-xl border border-border/50 p-6 shadow-sm hover:shadow-md transition-all h-full">
+      <h3 className="text-lg font-semibold mb-6">Distribuição por categoria</h3>
+
+      <div className="flex items-center gap-6">
+        {/* Donut chart with center label */}
+        <div className="relative flex-shrink-0 w-[220px] h-[220px]">
+          <PieChart width={220} height={220}>
+            <Pie
+              data={chartData}
+              cx={110}
+              cy={110}
+              innerRadius={68}
+              outerRadius={105}
+              dataKey="value"
+              strokeWidth={hasData ? 2 : 0}
+              stroke="hsl(var(--card))"
+              animationDuration={600}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            {/* {hasData && (
+              <Tooltip
+                formatter={(value: any) => [formatCurrency(value), '']}
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  color: 'hsl(var(--foreground))',
+                  fontSize: '13px',
+                }}
+              />
+            )} */}
+          </PieChart>
+          {/* Center overlay text */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-0.5">
+            <span className="text-xs text-muted-foreground capitalize">{monthLabel}</span>
+            <span className="text-base font-bold leading-tight">{formatCurrency(total)}</span>
+            <span className="text-xs text-muted-foreground">Saldo do mês</span>
+          </div>
         </div>
-      </div>
-      
-      <ResponsiveContainer width="100%" height={350}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
-            outerRadius={120}
-            innerRadius={40}
-            fill="#8884d8"
-            dataKey="value"
-            animationDuration={600}
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+
+        {/* Legend */}
+        {hasData ? (
+          <div className="flex flex-col gap-3 flex-1 min-w-0">
+            {data.map((item) => (
+              <div key={item.name} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-sm truncate">{item.name}</span>
+                </div>
+                <span className="text-sm font-semibold flex-shrink-0 tabular-nums">
+                  {formatCurrency(item.value)}
+                </span>
+              </div>
             ))}
-          </Pie>
-          <Tooltip
-            formatter={(value: any) => formatCurrency(value)}
-            contentStyle={{
-              backgroundColor: 'var(--card)',
-              border: '2px solid var(--border)',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-              color: 'var(--foreground)',
-              padding: '8px 12px'
-            }}
-            labelStyle={{
-              color: 'var(--foreground)',
-              fontWeight: 'bold',
-              fontSize: '14px'
-            }}
-            itemStyle={{
-              color: 'var(--foreground)',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}
-            cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
-          />
-          <Legend 
-            wrapperStyle={{ 
-              paddingTop: '20px'
-            } as React.CSSProperties}
-            iconType="circle"
-            formatter={(value, entry: any) => (
-              <span style={{ color: 'var(--foreground)', fontSize: '14px', fontWeight: '500' }}>
-                {value}
-              </span>
-            )}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma movimentação encontrada no período selecionado.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value)
-}
-
 export function CategoryBreakdownSkeleton() {
   return (
-    <div className="bg-gradient-to-br from-card to-card/80 rounded-xl border border-border/50 p-8 h-96 shadow-sm">
-      <div className="h-7 w-40 bg-muted rounded-lg animate-pulse mb-2" />
-      <div className="h-4 w-32 bg-muted rounded animate-pulse mb-6" />
-      <div className="h-80 bg-muted rounded-lg animate-pulse" />
+    <div className="bg-gradient-to-br from-card to-card/80 rounded-xl border border-border/50 p-6 shadow-sm h-full">
+      <div className="h-6 w-48 bg-muted rounded-lg animate-pulse mb-6" />
+      <div className="flex items-center gap-6">
+        <div className="w-[220px] h-[220px] rounded-full bg-muted animate-pulse flex-shrink-0" />
+        <div className="flex flex-col gap-3 flex-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <div className="h-4 w-28 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
