@@ -59,7 +59,7 @@ export function Sidebar() {
     <aside className="flex h-full w-[220px] flex-col border-r border-border bg-card">
       {/* Logo */}
       <div className="flex items-center gap-2.5 border-b border-border px-4 py-[18px]">
-        <Image src="/financecontrol-favicon.svg" alt="FinanceControl" width={32} height={32}/>
+        <Image src="/favicon-32.svg" alt="FinanceControl" width={32} height={32}/>
         <div className="flex flex-col leading-tight">
           <span className="text-[14px] font-medium">Finance Control</span>
           <span className="text-[10px] text-muted-foreground">by Menezes Tech Solutions</span>

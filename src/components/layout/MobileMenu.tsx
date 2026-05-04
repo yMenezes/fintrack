@@ -76,7 +76,7 @@ export function MobileMenu({ open, onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-[15px]">
           <div className="flex items-center gap-2.5">
-            <Image src="/financecontrol-favicon.svg" alt="FinanceControl" width={26} height={26}/>
+            <Image src="/favicon-32.svg" alt="FinanceControl" width={26} height={26}/>
             <div className="flex flex-col leading-tight">
               <span className="text-[14px] font-medium">Finance Control</span>
               <span className="text-[10px] text-muted-foreground">by Menezes Tech Solutions</span>

@@ -47,7 +47,22 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         {/* Cabeçalho */}
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">💸 FinTrack</h1>
+          <div className="flex items-center justify-center mb-4">
+            <img
+              src="/logo-light-transparent.svg"
+              alt="Finance Control"
+              width={400}
+              height={116}
+              className="block dark:hidden"
+            />
+            <img
+              src="/logo-dark-transparent.svg"
+              alt="Finance Control"
+              width={400}
+              height={116}
+              className="hidden dark:block"
+            />
+          </div>
           <p className="text-sm text-muted-foreground">
             Entre na sua conta para continuar
           </p>

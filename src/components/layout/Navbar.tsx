@@ -24,11 +24,6 @@ export function Navbar() {
           <Menu className="h-5 w-5" />
         </button>
 
-        {/* Logo — apenas mobile (sidebar tem logo no desktop) */}
-        <div className="md:hidden flex items-center gap-2">
-          <Image src="/financecontrol-favicon.svg" alt="FinanceControl" width={26} height={26}/>
-        </div>
-
         <div className="flex-1" />
         <ThemeToggle />
         <Button
