@@ -190,12 +190,12 @@ export function RecurringFormDialog({ open, onClose, recurring }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90vh] gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0 pr-12">
           <DialogTitle>{recurring ? 'Editar recorrência' : 'Nova recorrência'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-2">
+        <form id="recurring-form" onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto overscroll-contain min-h-0 px-6 py-4 grid gap-4">
           <input type="hidden" {...form.register('next_run_date')} />
           <input type="hidden" {...form.register('start_date')} />
 
@@ -331,12 +331,12 @@ export function RecurringFormDialog({ open, onClose, recurring }: Props) {
           </div>
 
           {form.formState.errors.root && <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={form.formState.isSubmitting}>Cancelar</Button>
-            <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? 'Salvando...' : 'Salvar'}</Button>
-          </DialogFooter>
         </form>
+
+        <DialogFooter className="px-6 py-4 border-t border-border shrink-0">
+          <Button type="button" variant="outline" onClick={onClose} disabled={form.formState.isSubmitting}>Cancelar</Button>
+          <Button type="submit" form="recurring-form" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? 'Salvando...' : 'Salvar'}</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
