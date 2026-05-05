@@ -164,15 +164,17 @@ export function InvoicePage({
       let color: string | undefined;
 
       if (groupMode === "category") {
-        key = inst.transactions.categories?.id ?? "uncategorized";
-        label = inst.transactions.categories?.name ?? "Sem categoria";
-        icon = inst.transactions.categories?.icon;
-        color = inst.transactions.categories?.color;
+        key = inst.transactions?.categories?.id ?? "uncategorized";
+        label = inst.transactions?.categories?.name ?? "Sem categoria";
+        icon = inst.transactions?.categories?.icon;
+        color = inst.transactions?.categories?.color;
       } else {
-        key = inst.transactions.purchase_date;
-        label = new Date(
-          inst.transactions.purchase_date + "T12:00:00",
-        ).toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
+        key = inst.transactions?.purchase_date ?? "unknown";
+        label = inst.transactions?.purchase_date 
+          ? new Date(
+              inst.transactions?.purchase_date + "T12:00:00",
+            ).toLocaleDateString("pt-BR", { day: "numeric", month: "long" })
+          : "Data desconhecida";
       }
 
       if (!groups[key]) groups[key] = { label, icon, color, items: [] };
@@ -465,16 +467,18 @@ export function InvoicePage({
 
                   {/* Linhas */}
                   {group.items.map((inst) => (
-                    <InvoiceInstallmentRow
-                      key={inst.id}
-                      id={inst.id}
-                      description={inst.transactions.description}
-                      number={inst.number}
-                      installmentsCount={inst.transactions.installments_count}
-                      amount={inst.amount}
-                      paid={inst.paid}
-                      onToggle={handleToggle}
-                    />
+                    inst.transactions ? (
+                      <InvoiceInstallmentRow
+                        key={inst.id}
+                        id={inst.id}
+                        description={inst.transactions.description}
+                        number={inst.number}
+                        installmentsCount={inst.transactions.installments_count}
+                        amount={inst.amount}
+                        paid={inst.paid}
+                        onToggle={handleToggle}
+                      />
+                    ) : null
                   ))}
                 </div>
               );
