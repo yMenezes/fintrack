@@ -189,6 +189,7 @@ export type Database = {
           posted_at: string | null
           cancelled_at: string | null
           schedule_source: 'manual' | 'recurring'
+          recurring_transaction_id: string | null
           card_id: string | null
           category_id: string | null
           person_id: string | null
@@ -210,6 +211,7 @@ export type Database = {
           posted_at?: string | null
           cancelled_at?: string | null
           schedule_source?: 'manual' | 'recurring'
+          recurring_transaction_id?: string | null
           card_id?: string | null
           category_id?: string | null
           person_id?: string | null
@@ -231,6 +233,7 @@ export type Database = {
           posted_at?: string | null
           cancelled_at?: string | null
           schedule_source?: 'manual' | 'recurring'
+          recurring_transaction_id?: string | null
           card_id?: string | null
           category_id?: string | null
           person_id?: string | null

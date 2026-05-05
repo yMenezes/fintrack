@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { MoneyInput } from "@/components/ui/money-input";
 
 const BRANDS = [
   "Visa",
@@ -38,9 +39,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   card?: Card; // se vier preenchido, é edição
+  onSaved?: () => void; // callback após salvar com sucesso
 };
 
-export function CardFormDialog({ open, onClose, card }: Props) {
+export function CardFormDialog({ open, onClose, card, onSaved }: Props) {
   const router = useRouter();
   const isEditing = !!card;
   
@@ -108,6 +110,7 @@ export function CardFormDialog({ open, onClose, card }: Props) {
       }
 
       router.refresh();
+      onSaved?.();
       onClose();
       form.reset();
     } catch (err) {
@@ -203,13 +206,7 @@ export function CardFormDialog({ open, onClose, card }: Props) {
           {/* Limite */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="limit">Limite (opcional)</Label>
-            <Input
-              id="limit"
-              type="number"
-              min="0.01"
-              placeholder="Ex: 5000"
-              {...form.register("limit_amount", { valueAsNumber: true })}
-            />
+            <MoneyInput control={form.control} name="limit_amount" id="limit" placeholder="5000" />
             {form.formState.errors.limit_amount && (
               <p className="text-sm text-destructive">{form.formState.errors.limit_amount.message}</p>
             )}

@@ -182,6 +182,10 @@ export function CardList() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         card={editCard}
+        onSaved={() => {
+          setPage(1);
+          fetchCards();
+        }}
       />
 
       <DeleteDialog

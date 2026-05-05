@@ -37,9 +37,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   category?: Category;
+  onSaved?: () => void;
 };
 
-export function CategoryFormDialog({ open, onClose, category }: Props) {
+export function CategoryFormDialog({ open, onClose, category, onSaved }: Props) {
   const router = useRouter();
   const isEditing = !!category;
 
@@ -99,6 +100,7 @@ export function CategoryFormDialog({ open, onClose, category }: Props) {
       }
 
       router.refresh();
+      onSaved?.();
       onClose();
       form.reset();
     } catch {

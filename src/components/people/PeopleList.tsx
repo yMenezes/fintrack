@@ -156,6 +156,10 @@ export function PeopleList() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         person={editPerson}
+        onSaved={() => {
+          setPage(1);
+          fetchPeople();
+        }}
       />
 
       <DeleteDialog

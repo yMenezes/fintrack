@@ -12,7 +12,7 @@ export const cardCreateSchema = z.object({
   brand: z.string().optional(),
   closing_day: z.number().int().min(1).max(31, 'Fechamento deve ser 1-31'),
   due_day: z.number().int().min(1).max(31, 'Vencimento deve ser 1-31'),
-  limit_amount: z.number().positive('Limite deve ser positivo').optional().nullable(),
+  limit_amount: z.number().min(0, 'Limite não pode ser negativo').optional().nullable(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Cor deve ser hex válida').default('#6366f1'),
 })
 
