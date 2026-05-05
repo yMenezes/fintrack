@@ -30,6 +30,9 @@ export function ColorPicker({ value, onChange, label = 'Cor' }: Props) {
     onChange(color)
   }
 
+  // Check if localColor is a custom color (not in presets)
+  const isCustom = !PRESET_COLORS.some(c => c.value.toLowerCase() === localColor.toLowerCase())
+
   return (
     <div className="flex flex-col gap-1.5">
       <Label>{label}</Label>
@@ -52,20 +55,38 @@ export function ColorPicker({ value, onChange, label = 'Cor' }: Props) {
 
         <div className="w-px self-stretch bg-border" />
 
-        <input
-          type="color"
-          value={localColor}
-          onChange={e => setLocalColor(e.target.value)}
-          onBlur={e => onChange(e.target.value)}
-          className="h-7 w-7 cursor-pointer rounded-full border border-border bg-transparent p-0.5"
-          title="Cor personalizada"
-        />
+        <div className="relative h-7 w-7">
+          <input
+            type="color"
+            value={localColor}
+            onChange={e => setLocalColor(e.target.value)}
+            onBlur={e => onChange(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            title="Cor personalizada"
+          />
+          <button
+            type="button"
+            className="absolute inset-0 rounded-full border border-border transition-transform hover:scale-110"
+            style={{
+              background: isCustom 
+                ? localColor
+                : 'conic-gradient(from 0deg, red, yellow, lime, cyan, blue, magenta, red)',
+              outline: value === localColor ? `2px solid ${localColor}` : 'none',
+              outlineOffset: '2px',
+            }}
+            title="Cor personalizada"
+            onClick={e => {
+              e.preventDefault()
+              e.currentTarget.parentElement?.querySelector('input[type="color"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+            }}
+          />
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-0.5">
+      {/* <div className="flex items-center gap-2 mt-0.5">
         <div className="h-4 w-4 rounded-full border border-border" style={{ background: localColor }} />
         <span className="text-xs text-muted-foreground font-mono">{localColor}</span>
-      </div>
+      </div> */}
     </div>
   )
 }
