@@ -165,6 +165,10 @@ export function CategoryList() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         category={editCategory}
+        onSaved={() => {
+          setPage(1);
+          fetchCategories();
+        }}
       />
 
       <DeleteDialog
