@@ -31,9 +31,10 @@ type Props = {
   open: boolean;
   onClose: () => void;
   person?: Person;
+  onSaved?: () => void;
 };
 
-export function PeopleFormDialog({ open, onClose, person }: Props) {
+export function PeopleFormDialog({ open, onClose, person, onSaved }: Props) {
   const router = useRouter();
   const isEditing = !!person;
 
@@ -88,6 +89,7 @@ export function PeopleFormDialog({ open, onClose, person }: Props) {
       }
 
       router.refresh();
+      onSaved?.();
       onClose();
       form.reset();
     } catch {

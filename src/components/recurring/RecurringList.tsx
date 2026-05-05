@@ -170,6 +170,10 @@ export function RecurringList() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         recurring={editRecurring}
+        onSaved={() => {
+          setPage(1)
+          fetchRecurring()
+        }}
       />
 
       <DeleteDialog
