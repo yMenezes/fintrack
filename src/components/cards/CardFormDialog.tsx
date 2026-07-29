@@ -39,7 +39,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   card?: Card; // se vier preenchido, é edição
-  onSaved?: () => void; // callback após salvar com sucesso
+  onSaved?: (saved?: Card) => void; // callback após salvar com sucesso
 };
 
 export function CardFormDialog({ open, onClose, card, onSaved }: Props) {
@@ -109,8 +109,9 @@ export function CardFormDialog({ open, onClose, card, onSaved }: Props) {
         return;
       }
 
+      const saved = await res.json();
       router.refresh();
-      onSaved?.();
+      onSaved?.(saved);
       onClose();
       form.reset();
     } catch (err) {

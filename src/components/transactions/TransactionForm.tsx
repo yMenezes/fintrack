@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,15 +14,14 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TransactionFormSkeleton } from "./TransactionFormSkeleton";
 import { MoneyInput } from "@/components/ui/money-input";
-
-type Card = { id: string; name: string };
-type Category = { id: string; name: string; icon: string };
-type Person = { id: string; name: string };
+import { CardFormDialog } from "@/components/cards/CardFormDialog";
+import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
+import { PeopleFormDialog } from "@/components/people/PeopleFormDialog";
 
 const TYPES = [
   { value: 'credit' as const, label: 'Crédito' },
@@ -38,19 +37,18 @@ type Props = {
 export function TransactionForm({ onSuccess }: Props) {
   const router = useRouter();
   const { transaction, mode, close, refresh } = useTransactionPanel();
-  const contextData = useTransactionData();
-  const fetchedRef = useRef(false);
-  const [localData, setLocalData] = useState({
-    cards: [] as Card[],
-    categories: [] as Category[],
-    people: [] as Person[]
-  });
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const { cards, categories, people } = useTransactionData();
 
-  // Use context data or local data
-  const cards = contextData.cards.length > 0 ? contextData.cards : localData.cards;
-  const categories = contextData.categories.length > 0 ? contextData.categories : localData.categories;
-  const people = contextData.people.length > 0 ? contextData.people : localData.people;
+  const [cardDialogOpen, setCardDialogOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [personDialogOpen, setPersonDialogOpen] = useState(false);
+  const [extraCard, setExtraCard] = useState<{ id: string; name: string } | null>(null);
+  const [extraCategory, setExtraCategory] = useState<{ id: string; name: string; icon: string } | null>(null);
+  const [extraPerson, setExtraPerson] = useState<{ id: string; name: string } | null>(null);
+
+  const cardOptions = extraCard && !cards.some((c) => c.id === extraCard.id) ? [...cards, extraCard] : cards;
+  const categoryOptions = extraCategory && !categories.some((c) => c.id === extraCategory.id) ? [...categories, extraCategory] : categories;
+  const personOptions = extraPerson && !people.some((p) => p.id === extraPerson.id) ? [...people, extraPerson] : people;
 
   const form = useForm<TransactionInput>({
     resolver: zodResolver(transactionCreateSchema),
@@ -76,47 +74,6 @@ export function TransactionForm({ onSuccess }: Props) {
   const installmentsCountValue = form.watch("installments_count");
   const isCredit = typeValue === "credit";
   const isScheduled = statusValue === "scheduled";
-
-  // Load data from context or fetch locally (only once)
-  useEffect(() => {
-    if (contextData.cards.length > 0) {
-      setIsLoadingData(false);
-      return;
-    }
-
-    if (fetchedRef.current) {
-      return;
-    }
-
-    fetchedRef.current = true;
-
-    async function loadData() {
-      try {
-        const [cardsRes, catsRes, peopleRes] = await Promise.all([
-          fetch("/api/cards?limit=100"),
-          fetch("/api/categories?limit=100"),
-          fetch("/api/people?limit=100"),
-        ]);
-        const [cardsData, catsData, peopleData] = await Promise.all([
-          cardsRes.json(),
-          catsRes.json(),
-          peopleRes.json(),
-        ]);
-        setLocalData({
-          cards: cardsData.data,
-          categories: catsData.data,
-          people: peopleData.data
-        });
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-        fetchedRef.current = false;
-      } finally {
-        setIsLoadingData(false);
-      }
-    }
-
-    loadData();
-  }, [contextData.cards.length]);
 
   // Reset form to defaults or pre-fill with transaction data in edit mode
   useEffect(() => {
@@ -183,10 +140,6 @@ export function TransactionForm({ onSuccess }: Props) {
           currency: "BRL",
         })
       : null;
-
-  if (isLoadingData) {
-    return <TransactionFormSkeleton />;
-  }
 
   async function handleSubmit(data: TransactionInput) {
     try {
@@ -384,6 +337,10 @@ export function TransactionForm({ onSuccess }: Props) {
             <Select
               value={form.watch("card_id") ?? "none"}
               onValueChange={(value) => {
+                if (value === "__new_card__") {
+                  setCardDialogOpen(true);
+                  return;
+                }
                 form.setValue("card_id", value === "none" ? null : value);
               }}
             >
@@ -392,11 +349,15 @@ export function TransactionForm({ onSuccess }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem cartão</SelectItem>
-                {cards.map((c) => (
+                {cardOptions.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
                   </SelectItem>
                 ))}
+                <SelectSeparator />
+                <SelectItem value="__new_card__" className="text-primary font-medium">
+                  + Novo cartão
+                </SelectItem>
               </SelectContent>
             </Select>
             {form.formState.errors.card_id && (
@@ -427,6 +388,10 @@ export function TransactionForm({ onSuccess }: Props) {
           <Select
             value={form.watch("category_id") ?? "none"}
             onValueChange={(value) => {
+              if (value === "__new_category__") {
+                setCategoryDialogOpen(true);
+                return;
+              }
               form.setValue("category_id", value === "none" ? null : value);
             }}
           >
@@ -435,11 +400,15 @@ export function TransactionForm({ onSuccess }: Props) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sem categoria</SelectItem>
-              {categories.map((c) => (
+              {categoryOptions.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.icon} {c.name}
                 </SelectItem>
               ))}
+              <SelectSeparator />
+              <SelectItem value="__new_category__" className="text-primary font-medium">
+                + Nova categoria
+              </SelectItem>
             </SelectContent>
           </Select>
           {form.formState.errors.category_id && (
@@ -453,6 +422,10 @@ export function TransactionForm({ onSuccess }: Props) {
           <Select
             value={form.watch("person_id") ?? "none"}
             onValueChange={(value) => {
+              if (value === "__new_person__") {
+                setPersonDialogOpen(true);
+                return;
+              }
               form.setValue("person_id", value === "none" ? null : value);
             }}
           >
@@ -461,11 +434,15 @@ export function TransactionForm({ onSuccess }: Props) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sem pessoa</SelectItem>
-              {people.map((p) => (
+              {personOptions.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name}
                 </SelectItem>
               ))}
+              <SelectSeparator />
+              <SelectItem value="__new_person__" className="text-primary font-medium">
+                + Nova pessoa
+              </SelectItem>
             </SelectContent>
           </Select>
           {form.formState.errors.person_id && (
@@ -505,6 +482,34 @@ export function TransactionForm({ onSuccess }: Props) {
             : "Salvar lançamento"}
         </Button>
       </div>
+
+      <CardFormDialog
+        open={cardDialogOpen}
+        onClose={() => setCardDialogOpen(false)}
+        onSaved={(created) => {
+          if (!created) return;
+          setExtraCard(created);
+          form.setValue("card_id", created.id, { shouldValidate: true });
+        }}
+      />
+      <CategoryFormDialog
+        open={categoryDialogOpen}
+        onClose={() => setCategoryDialogOpen(false)}
+        onSaved={(created) => {
+          if (!created) return;
+          setExtraCategory(created);
+          form.setValue("category_id", created.id, { shouldValidate: true });
+        }}
+      />
+      <PeopleFormDialog
+        open={personDialogOpen}
+        onClose={() => setPersonDialogOpen(false)}
+        onSaved={(created) => {
+          if (!created) return;
+          setExtraPerson(created);
+          form.setValue("person_id", created.id, { shouldValidate: true });
+        }}
+      />
     </form>
   );
 }

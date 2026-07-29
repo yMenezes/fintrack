@@ -37,7 +37,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   category?: Category;
-  onSaved?: () => void;
+  onSaved?: (saved?: Category) => void;
 };
 
 export function CategoryFormDialog({ open, onClose, category, onSaved }: Props) {
@@ -99,8 +99,9 @@ export function CategoryFormDialog({ open, onClose, category, onSaved }: Props) 
         return;
       }
 
+      const saved = await res.json();
       router.refresh();
-      onSaved?.();
+      onSaved?.(saved);
       onClose();
       form.reset();
     } catch {

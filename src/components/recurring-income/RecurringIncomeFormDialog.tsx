@@ -26,9 +26,12 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
+import { PeopleFormDialog } from "@/components/people/PeopleFormDialog";
 
 type RecurringIncomeWithRelations = RecurringIncome & {
   categories: { id: string; name: string; icon: string; color: string } | null;
@@ -54,6 +57,14 @@ export function RecurringIncomeFormDialog({
   const isEditing = !!recurring;
   const { categories, people } = useTransactionData();
   const [helpOpen, setHelpOpen] = useState(false);
+
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [personDialogOpen, setPersonDialogOpen] = useState(false);
+  const [extraCategory, setExtraCategory] = useState<{ id: string; name: string; icon: string } | null>(null);
+  const [extraPerson, setExtraPerson] = useState<{ id: string; name: string } | null>(null);
+
+  const categoryOptions = extraCategory && !categories.some((c) => c.id === extraCategory.id) ? [...categories, extraCategory] : categories;
+  const personOptions = extraPerson && !people.some((p) => p.id === extraPerson.id) ? [...people, extraPerson] : people;
 
   const form = useForm<RecurringIncomeInput>({
     resolver: zodResolver(recurringIncomeCreateSchema),
@@ -226,6 +237,7 @@ export function RecurringIncomeFormDialog({
   const dayOptions = Array.from({ length: 31 }, (_, index) => index + 1);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90vh] gap-0 p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0 pr-12">
@@ -373,20 +385,25 @@ export function RecurringIncomeFormDialog({
               <Label>Categoria</Label>
               <Select
                 value={form.watch("category_id") ?? "none"}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
+                  if (value === "__new_category__") { setCategoryDialogOpen(true); return }
                   form.setValue("category_id", value === "none" ? null : value)
-                }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Opcional" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem categoria</SelectItem>
-                  {categories.map((category) => (
+                  {categoryOptions.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.icon} {category.name}
                     </SelectItem>
                   ))}
+                  <SelectSeparator />
+                  <SelectItem value="__new_category__" className="text-primary font-medium">
+                    + Nova categoria
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -394,20 +411,25 @@ export function RecurringIncomeFormDialog({
               <Label>Pessoa</Label>
               <Select
                 value={form.watch("person_id") ?? "none"}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
+                  if (value === "__new_person__") { setPersonDialogOpen(true); return }
                   form.setValue("person_id", value === "none" ? null : value)
-                }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Opcional" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem pessoa</SelectItem>
-                  {people.map((person) => (
+                  {personOptions.map((person) => (
                     <SelectItem key={person.id} value={person.id}>
                       {person.name}
                     </SelectItem>
                   ))}
+                  <SelectSeparator />
+                  <SelectItem value="__new_person__" className="text-primary font-medium">
+                    + Nova pessoa
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -466,5 +488,25 @@ export function RecurringIncomeFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <CategoryFormDialog
+      open={categoryDialogOpen}
+      onClose={() => setCategoryDialogOpen(false)}
+      onSaved={(created) => {
+        if (!created) return;
+        setExtraCategory(created);
+        form.setValue("category_id", created.id, { shouldValidate: true });
+      }}
+    />
+    <PeopleFormDialog
+      open={personDialogOpen}
+      onClose={() => setPersonDialogOpen(false)}
+      onSaved={(created) => {
+        if (!created) return;
+        setExtraPerson(created);
+        form.setValue("person_id", created.id, { shouldValidate: true });
+      }}
+    />
+    </>
   );
 }
