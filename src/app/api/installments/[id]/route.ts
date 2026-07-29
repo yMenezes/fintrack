@@ -18,8 +18,6 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
   }
 
-  const { paid } = parsed.data
-
   // Verifica se a parcela pertence ao usuário via join
   const { data: installment } = await supabase
     .from('installments')
@@ -32,13 +30,23 @@ export async function PATCH(
     return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
   }
 
+  const updateData: Record<string, unknown> = {}
+  if (parsed.data.paid !== undefined) {
+    updateData.paid = parsed.data.paid
+  }
+  if (parsed.data.reimbursed !== undefined) {
+    updateData.reimbursed = parsed.data.reimbursed
+    updateData.reimbursed_at = parsed.data.reimbursed ? new Date().toISOString() : null
+  }
+
   const { error } = await supabase
     .from('installments')
-    .update({ paid })
+    .update(updateData)
     .eq('id', params.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   revalidatePath('/invoices')
+  revalidatePath('/people/[id]', 'layout')
   return NextResponse.json({ success: true })
 }

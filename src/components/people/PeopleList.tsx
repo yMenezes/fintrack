@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Pencil, Trash2, User, ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { Pencil, Trash2, User, ChevronLeft, ChevronRight, Wallet } from 'lucide-react'
 import type { Person } from '@/types/database'
 import { PeopleFormDialog } from './PeopleFormDialog'
 import { Button } from '@/components/ui/button'
@@ -104,6 +105,11 @@ export function PeopleList() {
 
                     {/* Ações */}
                     <div className="flex gap-1">
+                      <Link href={`/people/${person.id}`}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Wallet className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(person)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
