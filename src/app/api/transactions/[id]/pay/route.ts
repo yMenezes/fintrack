@@ -70,7 +70,7 @@ export async function PATCH(
 
     const { data: updatedTx, error: txError } = await supabase
       .from('transactions')
-      .update({ status: 'posted', posted_at: nowIso, updated_at: nowIso })
+      .update({ status: 'posted', posted_at: nowIso, scheduled_for: null })
       .eq('id', params.id)
       .eq('user_id', user.id)
       .select()

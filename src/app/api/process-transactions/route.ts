@@ -152,7 +152,7 @@ export async function POST() {
       // Parcelas existem mas status pode ainda estar 'scheduled' (crash em execução anterior)
       await supabase
         .from('transactions')
-        .update({ status: 'posted', posted_at: now, updated_at: now })
+        .update({ status: 'posted', posted_at: now, scheduled_for: null })
         .eq('id', tx.id)
         .eq('user_id', user.id)
         .eq('status', 'scheduled') // no-op se já estiver posted
@@ -187,7 +187,7 @@ export async function POST() {
       .update({
         status: 'posted',
         posted_at: now,
-        updated_at: now,
+        scheduled_for: null,
       })
       .eq('id', tx.id)
       .eq('user_id', user.id)

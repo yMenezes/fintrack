@@ -89,7 +89,6 @@ export type Database = {
           limit_amount: number | null
           color: string
           created_at: string
-          updated_at: string
           deleted_at: string | null
         }
         Insert: {
@@ -102,7 +101,6 @@ export type Database = {
           limit_amount?: number | null
           color: string
           created_at?: string
-          updated_at?: string
           deleted_at?: string | null
         }
         Update: {
@@ -115,7 +113,6 @@ export type Database = {
           limit_amount?: number | null
           color?: string
           created_at?: string
-          updated_at?: string
           deleted_at?: string | null
         }
       }
@@ -127,7 +124,6 @@ export type Database = {
           icon: string
           color: string
           created_at: string
-          updated_at: string
           deleted_at: string | null
         }
         Insert: {
@@ -137,7 +133,6 @@ export type Database = {
           icon: string
           color: string
           created_at?: string
-          updated_at?: string
           deleted_at?: string | null
         }
         Update: {
@@ -147,7 +142,6 @@ export type Database = {
           icon?: string
           color?: string
           created_at?: string
-          updated_at?: string
           deleted_at?: string | null
         }
       }
@@ -158,7 +152,6 @@ export type Database = {
           name: string
           relationship: string | null
           created_at: string
-          updated_at: string
           deleted_at: string | null
         }
         Insert: {
@@ -167,7 +160,6 @@ export type Database = {
           name: string
           relationship?: string | null
           created_at?: string
-          updated_at?: string
           deleted_at?: string | null
         }
         Update: {
@@ -176,7 +168,6 @@ export type Database = {
           name?: string
           relationship?: string | null
           created_at?: string
-          updated_at?: string
           deleted_at?: string | null
         }
       }
@@ -324,7 +315,6 @@ export type Database = {
           person_id: string | null
           notes: string | null
           created_at: string
-          updated_at: string
           deleted_at: string | null
         }
         Insert: {
@@ -346,7 +336,6 @@ export type Database = {
           person_id?: string | null
           notes?: string | null
           created_at?: string
-          updated_at?: string
           deleted_at?: string | null
         }
         Update: {
@@ -368,7 +357,6 @@ export type Database = {
           person_id?: string | null
           notes?: string | null
           created_at?: string
-          updated_at?: string
           deleted_at?: string | null
         }
       }
@@ -385,7 +373,6 @@ export type Database = {
           reimbursed: boolean
           reimbursed_at: string | null
           created_at: string
-          updated_at: string
         }
         Insert: {
           id?: string
@@ -399,7 +386,6 @@ export type Database = {
           reimbursed?: boolean
           reimbursed_at?: string | null
           created_at?: string
-          updated_at?: string
         }
         Update: {
           id?: string
@@ -413,7 +399,6 @@ export type Database = {
           reimbursed?: boolean
           reimbursed_at?: string | null
           created_at?: string
-          updated_at?: string
         }
       }
     }

@@ -33,6 +33,7 @@ export async function PATCH(
   const updateData: Record<string, unknown> = {}
   if (parsed.data.paid !== undefined) {
     updateData.paid = parsed.data.paid
+    updateData.paid_at = parsed.data.paid ? new Date().toISOString() : null
   }
   if (parsed.data.reimbursed !== undefined) {
     updateData.reimbursed = parsed.data.reimbursed
