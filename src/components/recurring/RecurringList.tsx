@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Repeat, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddButton } from "@/components/ui/add-button";
@@ -43,7 +43,10 @@ export function RecurringList() {
 
   const pageLabel = useMemo(() => Math.ceil(pagination.total / pagination.limit) || 1, [pagination.total, pagination.limit]);
 
+  const fetchedPageRef = useRef<number | null>(null);
   useEffect(() => {
+    if (fetchedPageRef.current === page) return;
+    fetchedPageRef.current = page;
     fetchRecurring()
   }, [page])
 
