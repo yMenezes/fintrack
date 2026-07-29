@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from 'next-themes'
 import "./globals.css";
@@ -31,7 +31,15 @@ export const metadata: Metadata = {
   icons:{
     icon: '/favicon-32.svg'
   },
-  
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Finance Control',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#1D4ED8',
 };
 
 // Root Layout — envolve TODAS as páginas da aplicação
