@@ -16,6 +16,9 @@ export const INCOME_SOURCE_LABELS: Record<IncomeSource, string> = {
   other: 'Outro',
 }
 
+export const INCOME_STATUSES = ['scheduled', 'received'] as const
+export type IncomeStatus = typeof INCOME_STATUSES[number]
+
 export type Database = {
   public: {
     Tables: {
@@ -30,6 +33,9 @@ export type Database = {
           amount: number
           date: string
           source: IncomeSource
+          status: IncomeStatus
+          scheduled_for: string | null
+          received_at: string | null
           notes: string | null
           created_at: string
           updated_at: string
@@ -45,6 +51,9 @@ export type Database = {
           amount: number
           date: string
           source?: IncomeSource
+          status?: IncomeStatus
+          scheduled_for?: string | null
+          received_at?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -60,6 +69,9 @@ export type Database = {
           amount?: number
           date?: string
           source?: IncomeSource
+          status?: IncomeStatus
+          scheduled_for?: string | null
+          received_at?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -370,6 +382,8 @@ export type Database = {
           reference_year: number
           paid: boolean
           paid_at: string | null
+          reimbursed: boolean
+          reimbursed_at: string | null
           created_at: string
           updated_at: string
         }
@@ -382,6 +396,8 @@ export type Database = {
           reference_year: number
           paid?: boolean
           paid_at?: string | null
+          reimbursed?: boolean
+          reimbursed_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -394,6 +410,8 @@ export type Database = {
           reference_year?: number
           paid?: boolean
           paid_at?: string | null
+          reimbursed?: boolean
+          reimbursed_at?: string | null
           created_at?: string
           updated_at?: string
         }
