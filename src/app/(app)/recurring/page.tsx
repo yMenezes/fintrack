@@ -2,12 +2,20 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { TransactionDataProvider } from '@/providers/TransactionDataProvider'
 import { RecurringList } from '@/components/recurring/RecurringList'
+import { RecurringTabs } from '@/components/recurring/RecurringTabs'
 import { RecurringListSkeleton } from '@/components/recurring/RecurringListSkeleton'
+import { RecurringIncomeList } from '@/components/recurring-income/RecurringIncomeList'
 
-async function RecurringContent() {
+type SearchParams = {
+  tab?: string
+}
+
+async function RecurringContent({ searchParams }: { searchParams: SearchParams }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+
+  const tab = searchParams.tab === 'income' ? 'income' : 'expenses'
 
   const [cardsRes, catsRes, peopleRes] = await Promise.all([
     supabase.from('cards').select('id, name').is('deleted_at', null).eq('user_id', user.id),
@@ -26,16 +34,23 @@ async function RecurringContent() {
         <p className="mb-6 text-sm text-muted-foreground">
           Cadastre regras que geram lançamentos futuros de forma repetida.
         </p>
-        <RecurringList />
+
+        <RecurringTabs tab={tab} />
+
+        {tab === 'income' ? <RecurringIncomeList /> : <RecurringList />}
       </div>
     </TransactionDataProvider>
   )
 }
 
-export default function RecurringPage() {
+export default function RecurringPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
   return (
     <Suspense fallback={<RecurringListSkeleton />}>
-      <RecurringContent />
+      <RecurringContent searchParams={searchParams} />
     </Suspense>
   )
 }
