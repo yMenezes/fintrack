@@ -6,7 +6,7 @@ import { Pencil, Trash2, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { DeleteDialog } from '@/components/ui/delete-dialog'
 import { IncomeFormDialog } from '@/components/income/IncomeFormDialog'
-import { INCOME_SOURCE_LABELS, type IncomeSource } from '@/types/database'
+import { INCOME_SOURCE_LABELS, type IncomeSource, type IncomeStatus } from '@/types/database'
 
 type IncomeItem = {
   id: string
@@ -14,6 +14,8 @@ type IncomeItem = {
   amount: number
   date: string
   source: IncomeSource
+  status: IncomeStatus
+  scheduled_for: string | null
   notes: string | null
   category_id: string | null
   person_id: string | null
@@ -172,6 +174,11 @@ export function IncomeList({ month, year, categoryId, personId, source, periodTy
                     <span className="text-xs px-1.5 py-0.5 rounded shrink-0 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
                       {INCOME_SOURCE_LABELS[item.source]}
                     </span>
+                    {item.status === 'scheduled' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded shrink-0 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400">
+                        Agendado
+                      </span>
+                    )}
                     {(item.categories || item.people) && (
                       <span className="text-xs text-muted-foreground truncate">
                         {[item.categories?.name, item.people?.name].filter(Boolean).join(' · ')}

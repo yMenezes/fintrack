@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,8 +15,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MoneyInput } from '@/components/ui/money-input'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { CategoryFormDialog } from '@/components/categories/CategoryFormDialog'
+import { PeopleFormDialog } from '@/components/people/PeopleFormDialog'
 
 type IncomeWithRelations = Income & {
   categories: { id: string; name: string; icon: string; color: string } | null
@@ -26,7 +28,7 @@ type IncomeWithRelations = Income & {
 type Props = {
   open: boolean
   onClose: () => void
-  income?: Pick<IncomeWithRelations, 'id' | 'description' | 'amount' | 'date' | 'source' | 'category_id' | 'person_id' | 'notes'>
+  income?: Pick<IncomeWithRelations, 'id' | 'description' | 'amount' | 'date' | 'source' | 'status' | 'scheduled_for' | 'category_id' | 'person_id' | 'notes'>
   onSaved?: () => void
 }
 
@@ -37,6 +39,14 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
   const isEditing = !!income
   const { categories, people } = useTransactionData()
 
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
+  const [personDialogOpen, setPersonDialogOpen] = useState(false)
+  const [extraCategory, setExtraCategory] = useState<{ id: string; name: string; icon: string } | null>(null)
+  const [extraPerson, setExtraPerson] = useState<{ id: string; name: string } | null>(null)
+
+  const categoryOptions = extraCategory && !categories.some((c) => c.id === extraCategory.id) ? [...categories, extraCategory] : categories
+  const personOptions = extraPerson && !people.some((p) => p.id === extraPerson.id) ? [...people, extraPerson] : people
+
   const form = useForm<IncomeInput>({
     resolver: zodResolver(incomeCreateSchema),
     defaultValues: {
@@ -44,11 +54,17 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
       amount: 0,
       date: today,
       source: 'other',
+      status: 'received',
+      scheduled_for: null,
       category_id: null,
       person_id: null,
       notes: null,
     },
   })
+
+  const statusValue = form.watch('status')
+  const dateValue = form.watch('date')
+  const isScheduled = statusValue === 'scheduled'
 
   useEffect(() => {
     if (!open) return
@@ -59,6 +75,8 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
         amount: income.amount,
         date: income.date.split('T')[0],
         source: income.source,
+        status: income.status,
+        scheduled_for: income.scheduled_for,
         category_id: income.category_id,
         person_id: income.person_id,
         notes: income.notes,
@@ -69,12 +87,27 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
         amount: 0,
         date: today,
         source: 'other',
+        status: 'received',
+        scheduled_for: null,
         category_id: null,
         person_id: null,
         notes: null,
       })
     }
   }, [open, isEditing, income, form])
+
+  useEffect(() => {
+    if (isScheduled) {
+      if (form.getValues('scheduled_for') !== dateValue) {
+        form.setValue('scheduled_for', dateValue, { shouldValidate: false })
+      }
+      return
+    }
+
+    if (form.getValues('scheduled_for') !== null) {
+      form.setValue('scheduled_for', null, { shouldValidate: false })
+    }
+  }, [isScheduled, dateValue, form])
 
   async function handleSubmit(data: IncomeInput) {
     try {
@@ -86,6 +119,8 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
+          status: isScheduled ? 'scheduled' : 'received',
+          scheduled_for: isScheduled ? data.date : null,
           category_id: data.category_id || null,
           person_id:   data.person_id   || null,
           notes:       data.notes       || null,
@@ -95,7 +130,7 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
       if (!res.ok) {
         const err = await res.json()
         if (err.error?.fieldErrors) {
-          const valid = ['description', 'amount', 'date', 'source', 'category_id', 'person_id', 'notes'] as const
+          const valid = ['description', 'amount', 'date', 'source', 'status', 'scheduled_for', 'category_id', 'person_id', 'notes'] as const
           Object.entries(err.error.fieldErrors).forEach(([key, msgs]: [string, any]) => {
             if (valid.includes(key as any)) {
               form.setError(key as keyof IncomeInput, { message: msgs[0] })
@@ -117,6 +152,7 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] gap-0 p-0">
         <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-border shrink-0 pr-8 sm:pr-12">
@@ -143,6 +179,35 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
               )}
             </div>
 
+            {/* Agendamento */}
+            <div className="space-y-1.5">
+              <Label className="text-sm">Recebimento</Label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => form.setValue('status', 'received', { shouldValidate: true })}
+                  className={`rounded-lg border py-2 text-xs transition-colors ${
+                    statusValue === 'received'
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border hover:bg-accent text-muted-foreground'
+                  }`}
+                >
+                  Agora
+                </button>
+                <button
+                  type="button"
+                  onClick={() => form.setValue('status', 'scheduled', { shouldValidate: true })}
+                  className={`rounded-lg border py-2 text-xs transition-colors ${
+                    statusValue === 'scheduled'
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border hover:bg-accent text-muted-foreground'
+                  }`}
+                >
+                  Agendar
+                </button>
+              </div>
+            </div>
+
             {/* Valor + Data */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <div className="space-y-1.5">
@@ -157,7 +222,7 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="date" className="text-sm">Data</Label>
+                <Label htmlFor="date" className="text-sm">{isScheduled ? 'Data agendada' : 'Data'}</Label>
                 <Input
                   id="date"
                   type="date"
@@ -191,50 +256,66 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
             </div>
 
             {/* Categoria */}
-            {categories.length > 0 && (
-              <div className="space-y-1.5">
-                <Label className="text-sm">Categoria (opcional)</Label>
-                <Select
-                  value={form.watch('category_id') ?? 'none'}
-                  onValueChange={(v) => form.setValue('category_id', v === 'none' ? null : v)}
-                >
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="Sem categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem categoria</SelectItem>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <Label className="text-sm">Categoria (opcional)</Label>
+              <Select
+                value={form.watch('category_id') ?? 'none'}
+                onValueChange={(v) => {
+                  if (v === '__new_category__') {
+                    setCategoryDialogOpen(true)
+                    return
+                  }
+                  form.setValue('category_id', v === 'none' ? null : v)
+                }}
+              >
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="Sem categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem categoria</SelectItem>
+                  {categoryOptions.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                  <SelectSeparator />
+                  <SelectItem value="__new_category__" className="text-primary font-medium">
+                    + Nova categoria
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Pessoa */}
-            {people.length > 0 && (
-              <div className="space-y-1.5">
-                <Label className="text-sm">Pessoa (opcional)</Label>
-                <Select
-                  value={form.watch('person_id') ?? 'none'}
-                  onValueChange={(v) => form.setValue('person_id', v === 'none' ? null : v)}
-                >
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="Nenhuma pessoa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma pessoa</SelectItem>
-                    {people.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <Label className="text-sm">Pessoa (opcional)</Label>
+              <Select
+                value={form.watch('person_id') ?? 'none'}
+                onValueChange={(v) => {
+                  if (v === '__new_person__') {
+                    setPersonDialogOpen(true)
+                    return
+                  }
+                  form.setValue('person_id', v === 'none' ? null : v)
+                }}
+              >
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="Nenhuma pessoa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma pessoa</SelectItem>
+                  {personOptions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                  <SelectSeparator />
+                  <SelectItem value="__new_person__" className="text-primary font-medium">
+                    + Nova pessoa
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Observações */}
             <div className="space-y-1.5">
@@ -263,5 +344,25 @@ export function IncomeFormDialog({ open, onClose, income, onSaved }: Props) {
         </form>
       </DialogContent>
     </Dialog>
+
+    <CategoryFormDialog
+      open={categoryDialogOpen}
+      onClose={() => setCategoryDialogOpen(false)}
+      onSaved={(created) => {
+        if (!created) return
+        setExtraCategory(created)
+        form.setValue('category_id', created.id, { shouldValidate: true })
+      }}
+    />
+    <PeopleFormDialog
+      open={personDialogOpen}
+      onClose={() => setPersonDialogOpen(false)}
+      onSaved={(created) => {
+        if (!created) return
+        setExtraPerson(created)
+        form.setValue('person_id', created.id, { shouldValidate: true })
+      }}
+    />
+    </>
   )
 }

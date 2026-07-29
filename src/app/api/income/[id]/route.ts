@@ -19,9 +19,33 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
   }
 
+  const { data: currentIncome, error: fetchError } = await supabase
+    .from('income')
+    .select('*')
+    .eq('id', params.id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (fetchError || !currentIncome) {
+    return NextResponse.json({ error: 'Entrada não encontrada' }, { status: 404 })
+  }
+
+  const resolvedStatus = parsed.data.status ?? currentIncome.status
+  const resolvedScheduledFor =
+    parsed.data.scheduled_for !== undefined
+      ? parsed.data.scheduled_for
+      : currentIncome.scheduled_for
+  const nowIso = new Date().toISOString()
+
   const { data, error } = await supabase
     .from('income')
-    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .update({
+      ...parsed.data,
+      status: resolvedStatus,
+      scheduled_for: resolvedStatus === 'scheduled' ? resolvedScheduledFor : null,
+      received_at: resolvedStatus === 'received' ? (currentIncome.received_at ?? nowIso) : null,
+      updated_at: nowIso,
+    })
     .eq('id', params.id)
     .eq('user_id', user.id)
     .select()

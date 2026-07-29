@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { PaidCheckbox } from '@/components/ui/paid-checkbox'
 
 type Props = {
   id:                 string
@@ -30,20 +31,7 @@ export function InvoiceInstallmentRow({
   return (
     <div className="flex items-center gap-3 px-5 py-3 border-t border-border">
       {/* Checkbox */}
-      <button
-        onClick={handleToggle}
-        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-          optimisticPaid
-            ? 'bg-emerald-500 border-emerald-500 dark:bg-emerald-600'
-            : 'border-border hover:border-emerald-400'
-        }`}
-      >
-        {optimisticPaid && (
-          <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-            <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        )}
-      </button>
+      <PaidCheckbox checked={optimisticPaid} onToggle={handleToggle} />
 
       {/* Descrição */}
       <div className="flex flex-1 flex-col min-w-0">

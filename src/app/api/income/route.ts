@@ -16,9 +16,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
   }
 
+  const { status, scheduled_for, ...rest } = parsed.data
+  const resolvedStatus = status ?? 'received'
+  const resolvedScheduledFor = resolvedStatus === 'scheduled' ? (scheduled_for ?? rest.date) : null
+  const resolvedReceivedAt = resolvedStatus === 'received' ? new Date().toISOString() : null
+
   const { data, error } = await supabase
     .from('income')
-    .insert({ ...parsed.data, user_id: user.id })
+    .insert({
+      ...rest,
+      user_id: user.id,
+      status: resolvedStatus,
+      scheduled_for: resolvedScheduledFor,
+      received_at: resolvedReceivedAt,
+    })
     .select()
     .single()
 
@@ -94,7 +105,7 @@ export async function GET(request: Request) {
   let dataQuery = supabase
     .from('income')
     .select(`
-      id, description, amount, date, source, notes,
+      id, description, amount, date, source, status, scheduled_for, received_at, notes,
       category_id, person_id,
       categories ( id, name, icon, color ),
       people     ( id, name )

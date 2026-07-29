@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
   TrendingUp,
+  Receipt,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -25,6 +26,7 @@ const navSections = [
     items: [
       { href: '/dashboard',       label: 'Dashboard',      icon: LayoutDashboard },
       { href: '/transactions',     label: 'Lançamentos',    icon: List            },
+      { href: '/contas',          label: 'Contas',         icon: Receipt         },
       { href: '/recurring',       label: 'Recorrências',   icon: Repeat          },
       { href: '/invoices',         label: 'Fatura mensal',  icon: CalendarRange   },
     ],

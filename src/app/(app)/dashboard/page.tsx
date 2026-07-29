@@ -5,6 +5,7 @@ import { CategoryBreakdown, CategoryBreakdownSkeleton } from '@/components/dashb
 import { UpcomingRecurring, UpcomingRecurringSkeleton } from '@/components/dashboard/UpcomingRecurring'
 import { RecentTransactions, RecentTransactionsSkeleton } from '@/components/dashboard/RecentTransactions'
 import { MonthlySummary, MonthlySummarySkeleton } from '@/components/dashboard/MonthlySummary'
+import { BillsSummaryCard, BillsSummaryCardSkeleton } from '@/components/dashboard/BillsSummaryCard'
 import { getCategoryBreakdownData, getCashFlowHistory } from '@/components/dashboard/queries'
 import { PeriodNavigator } from '@/components/ui/period-navigator'
 
@@ -96,9 +97,12 @@ export default function DashboardPage({ searchParams }: { searchParams?: Record<
             <RecentTransactions month={month} year={year} />
           </Suspense>
         </div>
-        <div className="lg:col-span-1">
-            <Suspense fallback={<MonthlySummarySkeleton />}>
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <Suspense fallback={<MonthlySummarySkeleton />}>
             <MonthlySummary month={month} year={year} />
+          </Suspense>
+          <Suspense fallback={<BillsSummaryCardSkeleton />}>
+            <BillsSummaryCard month={month} year={year} />
           </Suspense>
         </div>
       </div>

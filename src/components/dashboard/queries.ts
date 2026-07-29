@@ -135,6 +135,112 @@ export async function getCashFlowSummary(baseDate?: Date | string): Promise<Cash
   }
 }
 
+export type BillsSummary = {
+  toPay: number
+  paid: number
+  toReceive: number
+  received: number
+  overdueToPay: number
+  overdueToReceive: number
+}
+
+export async function getBillsSummary(baseDate?: Date | string): Promise<BillsSummary> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('User not found')
+
+  const now = baseDate ? (baseDate instanceof Date ? baseDate : new Date(baseDate)) : new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear = now.getFullYear()
+  const { monthStart, monthEnd } = getMonthBounds(now)
+  const today = toLocalDateString(new Date())
+
+  const [scheduledExpensesRes, unpaidInstallmentsRes, paidInstallmentsRes, scheduledIncomeRes, receivedIncomeRes] = await Promise.all([
+    // Scheduled, single-installment expenses due this month or earlier
+    supabase
+      .from('transactions')
+      .select('total_amount, scheduled_for')
+      .eq('user_id', user.id)
+      .eq('status', 'scheduled')
+      .eq('installments_count', 1)
+      .lte('scheduled_for', monthEnd)
+      .is('deleted_at', null),
+
+    // Posted, unpaid, single-installment installments (any outstanding invoice month)
+    supabase
+      .from('installments')
+      .select('amount, reference_month, reference_year, transactions!inner(status, user_id, installments_count)')
+      .eq('transactions.status', 'posted')
+      .eq('transactions.user_id', user.id)
+      .eq('transactions.installments_count', 1)
+      .eq('paid', false),
+
+    // Paid this month (mirrors expensesPaid, restricted to single-installment bills)
+    supabase
+      .from('installments')
+      .select('amount, transactions!inner(status, user_id, installments_count)')
+      .eq('transactions.status', 'posted')
+      .eq('transactions.user_id', user.id)
+      .eq('transactions.installments_count', 1)
+      .eq('paid', true)
+      .eq('reference_month', currentMonth)
+      .eq('reference_year', currentYear),
+
+    // Scheduled income due this month or earlier
+    supabase
+      .from('income')
+      .select('amount, scheduled_for')
+      .eq('user_id', user.id)
+      .eq('status', 'scheduled')
+      .lte('scheduled_for', monthEnd)
+      .is('deleted_at', null),
+
+    // Received this month
+    supabase
+      .from('income')
+      .select('amount')
+      .eq('user_id', user.id)
+      .eq('status', 'received')
+      .gte('date', monthStart)
+      .lte('date', monthEnd)
+      .is('deleted_at', null),
+  ])
+
+  const scheduledExpenses = scheduledExpensesRes.data ?? []
+  const scheduledIncome = scheduledIncomeRes.data ?? []
+
+  // Only invoice months up to the current one count as "outstanding" (future installments aren't due yet)
+  const outstandingInstallments = (unpaidInstallmentsRes.data ?? []).filter((item: any) =>
+    item.reference_year < currentYear ||
+    (item.reference_year === currentYear && item.reference_month <= currentMonth)
+  )
+  const overdueInstallments = outstandingInstallments.filter((item: any) =>
+    item.reference_year < currentYear ||
+    (item.reference_year === currentYear && item.reference_month < currentMonth)
+  )
+
+  const toPay = scheduledExpenses.reduce((sum, item: any) => sum + item.total_amount, 0)
+    + outstandingInstallments.reduce((sum, item: any) => sum + item.amount, 0)
+
+  const paid = (paidInstallmentsRes.data ?? []).reduce((sum, item: any) => sum + item.amount, 0)
+
+  const toReceive = scheduledIncome.reduce((sum, item: any) => sum + item.amount, 0)
+
+  const received = (receivedIncomeRes.data ?? []).reduce((sum, item: any) => sum + item.amount, 0)
+
+  const overdueToPay = scheduledExpenses
+    .filter((item: any) => item.scheduled_for < today)
+    .reduce((sum, item: any) => sum + item.total_amount, 0)
+    + overdueInstallments.reduce((sum, item: any) => sum + item.amount, 0)
+
+  const overdueToReceive = scheduledIncome
+    .filter((item: any) => item.scheduled_for < today)
+    .reduce((sum, item: any) => sum + item.amount, 0)
+
+  return { toPay, paid, toReceive, received, overdueToPay, overdueToReceive }
+}
+
 export async function getCashFlowHistory(baseDate?: Date | string): Promise<CashFlowHistory[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
