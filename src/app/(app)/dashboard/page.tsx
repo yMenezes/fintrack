@@ -71,12 +71,7 @@ export default function DashboardPage({ searchParams }: { searchParams?: Record<
         <SummaryCards month={month} year={year} />
       </Suspense>
 
-      {/* Cash Flow Chart */}
-      <Suspense fallback={<CashFlowChartSkeleton />}>
-        <CashFlowChartWrapper month={month} year={year} />
-      </Suspense>
-
-      {/* Middle row: Category Breakdown (2/3) + Upcoming Recurring (1/3) */}
+      {/* Row: Category Breakdown (2/3) + Contas (1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2">
           <Suspense fallback={<CategoryBreakdownSkeleton />}>
@@ -84,27 +79,28 @@ export default function DashboardPage({ searchParams }: { searchParams?: Record<
           </Suspense>
         </div>
         <div className="lg:col-span-1">
-          <Suspense fallback={<UpcomingRecurringSkeleton />}>
-            <UpcomingRecurring month={month} year={year} />
-          </Suspense>
-        </div>
-      </div>
-
-      {/* Bottom row: Recent Transactions (2/3) + Monthly Summary (1/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2">
-          <Suspense fallback={<RecentTransactionsSkeleton />}>
-            <RecentTransactions month={month} year={year} />
-          </Suspense>
-        </div>
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <Suspense fallback={<MonthlySummarySkeleton />}>
-            <MonthlySummary month={month} year={year} />
-          </Suspense>
           <Suspense fallback={<BillsSummaryCardSkeleton />}>
             <BillsSummaryCard month={month} year={year} />
           </Suspense>
         </div>
+      </div>
+
+      {/* Cash Flow Chart */}
+      <Suspense fallback={<CashFlowChartSkeleton />}>
+        <CashFlowChartWrapper month={month} year={year} />
+      </Suspense>
+
+      {/* Bottom row: Recent Transactions + Monthly Summary + Upcoming Recurring (1/3 each) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <Suspense fallback={<RecentTransactionsSkeleton />}>
+          <RecentTransactions month={month} year={year} />
+        </Suspense>
+        <Suspense fallback={<MonthlySummarySkeleton />}>
+          <MonthlySummary month={month} year={year} />
+        </Suspense>
+        <Suspense fallback={<UpcomingRecurringSkeleton />}>
+          <UpcomingRecurring month={month} year={year} />
+        </Suspense>
       </div>
     </div>
   )
